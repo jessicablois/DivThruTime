@@ -98,6 +98,11 @@ par(mfrow=c(3,3), mar=c(4,4,1,1)+0.1)
 dev.off()
 
 #spatially plot the positives, negatives, and neutrals
+library(sp)
+library(rgeos)
+
+siteLocs<- read.delim("~/Dropbox/Research/Community Paleomodels/projects/pollen/data/All.site.data-withagemodel-finalv2.txt", sep="\t", header=T)
+
 #these are sites with no changes in diversity through time
 spatialNeutrals<- siteLocs[match(rownames(richness)[neutrals], siteLocs$Handle),]
 coordinates(spatialNeutrals)<- ~lon_alb_km+lat_alb_km
@@ -124,3 +129,49 @@ segmented.mod <- segmented(lin.mod, seg.Z = ~times, psi=10500)
 plot(segmented.mod, add=T)
 
 
+#### Calc additions and subtractions ####
+
+## Note: this works in principle, but need to make 'changes' matrix the size of all taxa, and match taxa at sites to colnames
+
+pollenDir<- "~/Dropbox/Research/Community Paleomodels/projects/pollen/output/all data by site/"
+files<- list.files(path=pollenDir, pattern="gdm.data")
+sites<- gsub(".gdm.data.csv", "", files)
+times<- seq(0, 21000, by=500)
+
+times<- seq(minTime, maxTime, by=500)
+nTax<- 26
+taxa<- c( "Abies",           "Betula",          "Larix",           "Ostrya.Carpinus", "Picea",          
+          "Quercus",         "Alnus",           "Ambrosia.type",   "Fraxinus",        "Populus",        
+          "Acer",            "Carya",           "Fagus",           "Juglans",         "Salix",          
+          "Tsuga",           "Ulmus",           "Artemisia",       "Galium",         "Ephedra",        
+          "Platanus",        "Tilia",           "Corylus",         "Iva",             "Thalictrum",     
+          "Pinus")
+
+changes<- as.data.frame(matrix(ncol=nTax+2, nrow=length(times)-1))
+changes[,1]<- times[length(times):2]
+changes[,2]<- times[(length(times)-1):1]
+colnames(changes)[1:2]<- c("Btime", "Etime")
+colnames(changes)[3:ncol(additions)]<- taxa
+changesAll<- list(changes)
+
+for (i in 1:length(sites)){
+  sitePath<- files[match(sites[i], gsub(".gdm.data.csv", "", files))]
+  dat<- read.csv(paste(pollenDir, sitePath, sep="")) #read data
+  datTimes<- dat[,1] # pull out time periods
+  
+  datRev<- as.matrix(dat[,-1]) # remove times and convert to matrix
+  datRev[which(datRev>0)]<- 1 #replace abundance with presence-absence   
+  
+  changes<- as.data.frame(matrix(ncol=nTax+2, nrow=length(times)-1))
+  changes[,1]<- times[length(times):2]
+  changes[,2]<- times[(length(times)-1):1]
+  colnames(changes)[1:2]<- c("Btime", "Etime")
+  colnames(changes)[3:ncol(additions)]<- taxa
+  
+  for (j in length(datTimes):2){
+    changesTemp<- datRev[j-1,]-datRev[j,]  #0 means no change, -1 means species loss, +1 means species gain
+    changes[which(changes[,1]==datTimes[j]), 3:ncol(changes)]<- changesTemp
+  }
+  
+  changesAll[[i]]<-changes 
+}
