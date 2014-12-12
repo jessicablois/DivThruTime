@@ -1,24 +1,38 @@
-## Test change so that we can all see how GitHub works
+#### Arrange pollen data so that presence-absence corresponds to the 5% threshold ####
 
-#### Preliminary Code ####
+dat0<- read.csv("~/Dropbox/Research/Community Paleomodels/projects/pollen/output/all data by time/PollenAbund_Q_0bp.csv", header=T, row.names=1)
+pollenMax<- apply(dat0, 2, max)
+pollenThreshold<- pollenMax*0.05
+
+
+#### Part 1: BASIC PATTERNS ####
+# Calculate richness at each site
+
 source("code/DivThruTimeFunctions.R")
-
-# Note also that this is calling the original data
-# Do I want to use the pollen thresholds established by Kaitlin and Diego?
 
 # pollenDir<- "/Volumes/bloisgroup/bloislab/Data/Biological" #fix this later to connect to server instead of local computer
 pollenDir<- "~/Dropbox/Research/Community Paleomodels/projects/pollen/output/all data by site/"
 files<- list.files(path=pollenDir, pattern="gdm.data")
-sites<- gsub(".gdm.data.csv", "", files)
-times<- seq(0, 21000, by=500)
 
-richness<- matrix(ncol=length(times), nrow=length(sites))
-colnames(richness)<- times
+sites<- gsub(".gdm.data.csv", "", files)
+allTimes<- seq(0, 21000, by=500)
+
+richness<- matrix(ncol=length(allTimes), nrow=length(sites))
+colnames(richness)<- allTimes
 rownames(richness)<- sites
 
 for (i in 1:length(sites)){
-  richness[i,]<- calcSiteRichness(sites[i], 0, 21000)
+  sitePath<- files[match(sites[i], gsub(".gdm.data.csv", "", files))]
+  dat<- read.csv(paste(pollenDir, sitePath, sep="")) #read data
+  datTimes<- dat[,1] # pull out time periods
+  
+  minTime<- min(datTimes)
+  maxTime<- max(datTimes)
+
+  richness[i,]<- calcSiteRichness(dat, minTime, maxTime, pollenThreshold)
+   
 }
+
 
 # Calculate sample size
 sampSize<- apply(richness, 2, sampleSize)
@@ -26,9 +40,9 @@ sampSize<- apply(richness, 2, sampleSize)
 # Plot the mean genus richness across all sites and overlay sample size
 pdf(file="figures/RichnessSampSizeThruTime-all.pdf", height=4, width=6)
   par(mar=c(4,4,4,4)+0.1)
-  plot(colMeans(richness, na.rm=T)~times, type="l", xlim=c(0, 21000), xlab="Time slice (kyr BP)", ylab="Mean Genus Richness")
+  plot(colMeans(richness, na.rm=T)~allTimes, type="l", xlim=c(0, 21000), xlab="Time slice (kyr BP)", ylab="Mean Genus Richness")
   par(new=T)
-  plot(sampSize~times, pch=16, col="red", ylim=c(0, max(sampSize)), xlim=c(0, 21000), axes=F, xlab="", ylab="")
+  plot(sampSize~allTimes, pch=16, col="red", ylim=c(0, max(sampSize)), xlim=c(0, 21000), axes=F, xlab="", ylab="")
   axis(4, at=seq(0, max(sampSize), by=100))
   mtext("Number of Sites", 4, line=3, col="red")
 dev.off()
@@ -36,15 +50,43 @@ dev.off()
 #Plot each individual line
 richnessMeans<- colMeans(richness, na.rm=T)
 pdf(file="figures/RichnessThruTime-all-withLines.pdf", height=4, width=6)
-  plot(colMeans(richness, na.rm=T)~times, 
+  plot(colMeans(richness, na.rm=T)~allTimes, 
        xlim=c(0, 21000), ylim=c(0, max(richness, na.rm=T)), 
        type="n", 
        xlab="Time slice (kyr BP)", ylab="Mean Genus Richness")
     for (i in 1:nrow(richness)){
-      lines(richness[i,]~times, col=rainbow(nrow(richness))[i]) 
+      lines(richness[i,]~allTimes, col=rainbow(nrow(richness))[i]) 
     }
-    lines(richnessMeans~times, col="black", lwd=2)
+    lines(richnessMeans~allTimes, col="black", lwd=2)
 dev.off()
+
+#### Part 2: COMPOSITIONAL CHANGE VERSUS CLIMATE CHANGE ####
+# Did more compositional change occurred between periods with more rapid climate change?
+
+#read in climate velocity stacks.
+# the temporalGrad layer has the magnitudes of climate change
+
+climateDir<- "/Volumes/bloisgroup/bloislab/Data/Climate/Paleo/CCSM3_500/With_PaleoShorelines"
+
+t1<- 21000
+t2<- 20500
+
+var<- "tmax_year_ave"
+
+climVeloc<- stack(paste(climateDir, "/Climate Velocity/", var, "-", t1, "-", t2, ".tif", sep=""))
+names(climVeloc)<- c("temporalGrad", "spatialGrad", "Velocity", "BRNG")
+
+
+
+
+
+
+
+
+
+
+
+
 
 #Are there breakpoints in the lines?
 #And if so, are they generally in the same place?
@@ -52,8 +94,8 @@ linearSlopes<- vector(length=nrow(richness))
 for (i in 1:nrow(richness)){
   tempSpp<- richness[i,]
   if (length(which(!is.na(richness[i,])))>2){ #if there are more than two points, fit a model and store the slope
-    lin.mod <- lm(tempSpp~times)
-    plot(tempSpp~times, pch=16, ylim=c(0, max(richness, na.rm=T)))
+    lin.mod <- lm(tempSpp~allTimes)
+    plot(tempSpp~allTimes, pch=16, ylim=c(0, max(richness, na.rm=T)))
     abline(lin.mod)
     linearSlopes[i]<- lin.mod$coefficients[2]
   }else{
@@ -69,7 +111,7 @@ neutrals<- intersect(which(linearSlopes<0.0005),which(linearSlopes> -0.0005))
 pdf(file="figures/RichnessThruTime-positives.pdf", height=9, width=10)
   par(mfrow=c(3,3), mar=c(4,4,1,1)+0.1)
   for (k in 1:length(positives)){
-    plot(richness[positives[k],]~times, 
+    plot(richness[positives[k],]~allTimes, 
          type="l", 
          ylim=c(0, max(richness, na.rm=T)),
          xlab="", ylab="Site Richness")
@@ -80,7 +122,7 @@ dev.off()
 pdf(file="figures/RichnessThruTime-negatives.pdf", height=9, width=10)
   par(mfrow=c(3,3), mar=c(4,4,1,1)+0.1)
   for (k in 1:length(negatives)){
-    plot(richness[negatives[k],]~times, 
+    plot(richness[negatives[k],]~allTimes, 
          type="l", 
          ylim=c(0, max(richness, na.rm=T)),
          xlab="", ylab="Site Richness")
@@ -91,7 +133,7 @@ dev.off()
 pdf(file="figures/RichnessThruTime-neutrals.pdf", height=9, width=10)
 par(mfrow=c(3,3), mar=c(4,4,1,1)+0.1)
   for (k in 1:length(neutrals)){
-    plot(richness[neutrals[k],]~times, 
+    plot(richness[neutrals[k],]~allTimes, 
          type="l", 
          ylim=c(0, max(richness, na.rm=T)),
          xlab="", ylab="Site Richness")
