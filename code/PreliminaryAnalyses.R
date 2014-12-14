@@ -91,113 +91,38 @@ for (i in length(allTimes):2){
   t1<- allTimes[i]
   t2<- allTimes[i-1]
   
+  #read in pollen data for t1 and t2 to find sites
+  pollen.t1<- read.csv(paste("~/Dropbox/Research/Community Paleomodels/projects/pollen/output/all data by time/PollenAbund_Q_", t1, "bp.csv", sep=""))
+  pollen.t2<- read.csv(paste("~/Dropbox/Research/Community Paleomodels/projects/pollen/output/all data by time/PollenAbund_Q_", t2, "bp.csv", sep=""))
+  
+  sharedSites<- intersect(pollen.t1$sites, pollen.t2$sites)
+  siteLocsShared<- match(sharedSites, sites$Handle)
+  
+  #read in climate data and extract values from shared sites
   climVeloc<- stack(paste(climateDir, "/Climate Velocity/", var, "-", t1, "-", t2, ".tif", sep=""))
   names(climVeloc)<- c("temporalGrad", "spatialGrad", "Velocity", "BRNG")
   
-  climChange<- extract(climVeloc$temporalGrad, siteLocs)
-  climateChange[i-1]<- cellStats(climVeloc$temporalGrad, stat="mean", na.rm=T)
+  climChange<- extract(climVeloc$temporalGrad, siteLocs[siteLocsShared])
+  climateChange[i-1]<- mean(climChange, na.rm=T)
 }
 climateChange<- climateChange[42:1]
+climateChange<- climateChange*500 #convert degrees per year to degrees.
 
-plot(richChange~climateChange, pch=16)
-summary(lm(richChange~climateChange))
-# no relationship.  But, this ic climate change averaged across the whole US.  
-# What about at the actual locations of the sites?
-# OK, getting closer, but it's still calling all points for all times, not the points used in each slice
+plot(richChange~climateChange, pch=16, xlab="Temperature change")
+points(richChange[1:19]~climateChange[1:19], col="blue", pch=16)
+points(richChange[20:42]~climateChange[20:42], col="red", pch=16)
 
+climateChangeModel<- summary(lm(richChange~climateChange))  # no relationship.  
 
+#Pleistocene change [1:19]
+plot(richChange[1:19]~climateChange[1:19], pch=16, xlab="Temperature change")
+summary(lm(richChange[1:19]~climateChange[1:19]))
 
+#Holocene [20:42]
+plot(richChange[20:42]~climateChange[20:42], pch=16, xlab="Temperature change")
+summary(lm(richChange[20:42]~climateChange[20:42]))
 
-
-
-
-
-
-
-
-#Are there breakpoints in the lines?
-#And if so, are they generally in the same place?
-linearSlopes<- vector(length=nrow(richness))
-for (i in 1:nrow(richness)){
-  tempSpp<- richness[i,]
-  if (length(which(!is.na(richness[i,])))>2){ #if there are more than two points, fit a model and store the slope
-    lin.mod <- lm(tempSpp~allTimes)
-    plot(tempSpp~allTimes, pch=16, ylim=c(0, max(richness, na.rm=T)))
-    abline(lin.mod)
-    linearSlopes[i]<- lin.mod$coefficients[2]
-  }else{
-    linearSlopes[i]<- NaN
-  }
-}
-
-positives<- which(linearSlopes>=0.0005)
-negatives<- which(linearSlopes<= -0.0005)
-neutrals<- intersect(which(linearSlopes<0.0005),which(linearSlopes> -0.0005))
-
-
-pdf(file="figures/RichnessThruTime-positives.pdf", height=9, width=10)
-  par(mfrow=c(3,3), mar=c(4,4,1,1)+0.1)
-  for (k in 1:length(positives)){
-    plot(richness[positives[k],]~allTimes, 
-         type="l", 
-         ylim=c(0, max(richness, na.rm=T)),
-         xlab="", ylab="Site Richness")
-    mtext(rownames(richness)[positives[k]], side=3, line=-1.5, adj=1, cex=0.75)
-  }
-dev.off()
-
-pdf(file="figures/RichnessThruTime-negatives.pdf", height=9, width=10)
-  par(mfrow=c(3,3), mar=c(4,4,1,1)+0.1)
-  for (k in 1:length(negatives)){
-    plot(richness[negatives[k],]~allTimes, 
-         type="l", 
-         ylim=c(0, max(richness, na.rm=T)),
-         xlab="", ylab="Site Richness")
-    mtext(rownames(richness)[negatives[k]], side=3, line=-1.5, adj=1, cex=0.75)
-  }
-dev.off()
-
-pdf(file="figures/RichnessThruTime-neutrals.pdf", height=9, width=10)
-par(mfrow=c(3,3), mar=c(4,4,1,1)+0.1)
-  for (k in 1:length(neutrals)){
-    plot(richness[neutrals[k],]~allTimes, 
-         type="l", 
-         ylim=c(0, max(richness, na.rm=T)),
-         xlab="", ylab="Site Richness")
-    mtext(rownames(richness)[neutrals[k]], side=3, line=-1.5, adj=1, cex=0.75)
-  }
-dev.off()
-
-#spatially plot the positives, negatives, and neutrals
-library(sp)
-library(rgeos)
-
-siteLocs<- read.delim("~/Dropbox/Research/Community Paleomodels/projects/pollen/data/All.site.data-withagemodel-finalv2.txt", sep="\t", header=T)
-
-#these are sites with no changes in diversity through time
-spatialNeutrals<- siteLocs[match(rownames(richness)[neutrals], siteLocs$Handle),]
-coordinates(spatialNeutrals)<- ~lon_alb_km+lat_alb_km
-neutralCentroid<- gCentroid(spatialNeutrals)
-plot(spatialNeutrals, col="lightgray")
-points(neutralCentroid, col="darkgray", pch=16, cex=1.5)
-
-#these are sites with increases in diversity through time
-spatialNegatives<- siteLocs[match(rownames(richness)[negatives], siteLocs$Handle),]
-coordinates(spatialNegatives)<- ~lon_alb_km+lat_alb_km
-negativeCentroid<- gCentroid(spatialNegatives)
-plot(spatialNegatives, col="blue", add=T)
-points(negativeCentroid, col="darkblue", pch=16, cex=1.5)
-
-#these are sites with decreases in diversity through time
-spatialPositives<- siteLocs[match(rownames(richness)[positives], siteLocs$Handle),]
-coordinates(spatialPositives)<- ~lon_alb_km+lat_alb_km
-positiveCentroid<- gCentroid(spatialPositives)
-plot(spatialPositives, col="red", add=T)
-points(positiveCentroid, col="red", pch=16, cex=1.5)
-
-
-segmented.mod <- segmented(lin.mod, seg.Z = ~times, psi=10500)
-plot(segmented.mod, add=T)
+# ok, no correlations with climate change, either in pleistocene or holocene
 
 
 #### Calc additions and subtractions ####
@@ -246,3 +171,89 @@ for (i in 1:length(sites)){
   
   changesAll[[i]]<-changes 
 }
+
+
+
+#Are there breakpoints in the lines?
+#And if so, are they generally in the same place?
+linearSlopes<- vector(length=nrow(richness))
+for (i in 1:nrow(richness)){
+  tempSpp<- richness[i,]
+  if (length(which(!is.na(richness[i,])))>2){ #if there are more than two points, fit a model and store the slope
+    lin.mod <- lm(tempSpp~allTimes)
+    plot(tempSpp~allTimes, pch=16, ylim=c(0, max(richness, na.rm=T)))
+    abline(lin.mod)
+    linearSlopes[i]<- lin.mod$coefficients[2]
+  }else{
+    linearSlopes[i]<- NaN
+  }
+}
+
+positives<- which(linearSlopes>=0.0005)
+negatives<- which(linearSlopes<= -0.0005)
+neutrals<- intersect(which(linearSlopes<0.0005),which(linearSlopes> -0.0005))
+
+
+pdf(file="figures/RichnessThruTime-positives.pdf", height=9, width=10)
+par(mfrow=c(3,3), mar=c(4,4,1,1)+0.1)
+for (k in 1:length(positives)){
+  plot(richness[positives[k],]~allTimes, 
+       type="l", 
+       ylim=c(0, max(richness, na.rm=T)),
+       xlab="", ylab="Site Richness")
+  mtext(rownames(richness)[positives[k]], side=3, line=-1.5, adj=1, cex=0.75)
+}
+dev.off()
+
+pdf(file="figures/RichnessThruTime-negatives.pdf", height=9, width=10)
+par(mfrow=c(3,3), mar=c(4,4,1,1)+0.1)
+for (k in 1:length(negatives)){
+  plot(richness[negatives[k],]~allTimes, 
+       type="l", 
+       ylim=c(0, max(richness, na.rm=T)),
+       xlab="", ylab="Site Richness")
+  mtext(rownames(richness)[negatives[k]], side=3, line=-1.5, adj=1, cex=0.75)
+}
+dev.off()
+
+pdf(file="figures/RichnessThruTime-neutrals.pdf", height=9, width=10)
+par(mfrow=c(3,3), mar=c(4,4,1,1)+0.1)
+for (k in 1:length(neutrals)){
+  plot(richness[neutrals[k],]~allTimes, 
+       type="l", 
+       ylim=c(0, max(richness, na.rm=T)),
+       xlab="", ylab="Site Richness")
+  mtext(rownames(richness)[neutrals[k]], side=3, line=-1.5, adj=1, cex=0.75)
+}
+dev.off()
+
+#spatially plot the positives, negatives, and neutrals
+library(sp)
+library(rgeos)
+
+siteLocs<- read.delim("~/Dropbox/Research/Community Paleomodels/projects/pollen/data/All.site.data-withagemodel-finalv2.txt", sep="\t", header=T)
+
+#these are sites with no changes in diversity through time
+spatialNeutrals<- siteLocs[match(rownames(richness)[neutrals], siteLocs$Handle),]
+coordinates(spatialNeutrals)<- ~lon_alb_km+lat_alb_km
+neutralCentroid<- gCentroid(spatialNeutrals)
+plot(spatialNeutrals, col="lightgray")
+points(neutralCentroid, col="darkgray", pch=16, cex=1.5)
+
+#these are sites with increases in diversity through time
+spatialNegatives<- siteLocs[match(rownames(richness)[negatives], siteLocs$Handle),]
+coordinates(spatialNegatives)<- ~lon_alb_km+lat_alb_km
+negativeCentroid<- gCentroid(spatialNegatives)
+plot(spatialNegatives, col="blue", add=T)
+points(negativeCentroid, col="darkblue", pch=16, cex=1.5)
+
+#these are sites with decreases in diversity through time
+spatialPositives<- siteLocs[match(rownames(richness)[positives], siteLocs$Handle),]
+coordinates(spatialPositives)<- ~lon_alb_km+lat_alb_km
+positiveCentroid<- gCentroid(spatialPositives)
+plot(spatialPositives, col="red", add=T)
+points(positiveCentroid, col="red", pch=16, cex=1.5)
+
+
+segmented.mod <- segmented(lin.mod, seg.Z = ~times, psi=10500)
+plot(segmented.mod, add=T)
