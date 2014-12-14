@@ -34,24 +34,31 @@ for (i in 1:length(sites)){
 }
 
 
+richnessMeans<- colMeans(richness, na.rm=T)
+
 # Calculate sample size
 sampSize<- apply(richness, 2, sampleSize)
+
+pdf(file="figures/Correlation-Richness-NoSites.pdf", height=4, width=6)
+  plot(richnessMeans ~ sampSize, pch=16, xlab="Number of sites", ylab="Mean richness")
+  test1<- cor.test(richnessMeans, sampSize) #is richness correlated with sample size?
+  legend("bottomright", bty="n", paste("cor=",round(test1$estimate, 4), "; p=", round(test1$p.value, 4), sep=""), cex=0.75)
+dev.off()
 
 # Plot the mean genus richness across all sites and overlay sample size
 pdf(file="figures/RichnessSampSizeThruTime-all.pdf", height=4, width=6)
   par(mar=c(4,4,4,4)+0.1)
-  plot(colMeans(richness, na.rm=T)~allTimes, type="l", xlim=c(0, 21000), xlab="Time slice (kyr BP)", ylab="Mean Genus Richness")
+  plot(richnessMeans~allTimes, type="l", xlim=c(21000,0), xlab="Time slice (kyr BP)", ylab="Mean Genus Richness")
   par(new=T)
-  plot(sampSize~allTimes, pch=16, col="red", ylim=c(0, max(sampSize)), xlim=c(0, 21000), axes=F, xlab="", ylab="")
-  axis(4, at=seq(0, max(sampSize), by=100))
+  plot(sampSize~allTimes, pch=16, col="red", ylim=c(0, max(sampSize)), xlim=c(21000,0), axes=F, xlab="", ylab="")
+  axis(4, at=seq(0, max(sampSize), by=100), col.axis="red")
   mtext("Number of Sites", 4, line=3, col="red")
 dev.off()
 
 #Plot each individual line
-richnessMeans<- colMeans(richness, na.rm=T)
 pdf(file="figures/RichnessThruTime-all-withLines.pdf", height=4, width=6)
-  plot(colMeans(richness, na.rm=T)~allTimes, 
-       xlim=c(0, 21000), ylim=c(0, max(richness, na.rm=T)), 
+  plot(richnessMeans ~ allTimes, 
+       xlim=c(21000,0), ylim=c(0, max(richness, na.rm=T)), 
        type="n", 
        xlab="Time slice (kyr BP)", ylab="Mean Genus Richness")
     for (i in 1:nrow(richness)){
@@ -62,21 +69,41 @@ dev.off()
 
 #### Part 2: COMPOSITIONAL CHANGE VERSUS CLIMATE CHANGE ####
 # Did more compositional change occurred between periods with more rapid climate change?
+library(raster)
+albersCRS<- CRS("+proj=aea +lat_1=20 +lat2=60 +lat0=40 +lon_0=-96 +x_0=0 +y_0=0 +datum=WGS84 +units=m +no_defs +ellps=GRS80 +towgs84=0,0,0")
+
+# extract amount of compositional change
+richChange<- richnessMeans[43:2]-richnessMeans[42:1]
 
 #read in climate velocity stacks.
 # the temporalGrad layer has the magnitudes of climate change
 
 climateDir<- "/Volumes/bloisgroup/bloislab/Data/Climate/Paleo/CCSM3_500/With_PaleoShorelines"
 
-t1<- 21000
-t2<- 20500
-
 var<- "tmax_year_ave"
 
-climVeloc<- stack(paste(climateDir, "/Climate Velocity/", var, "-", t1, "-", t2, ".tif", sep=""))
-names(climVeloc)<- c("temporalGrad", "spatialGrad", "Velocity", "BRNG")
+climateChange<- vector(length=length(richChange))
+sites<- read.delim("~/Dropbox/Research/Community Paleomodels/projects/pollen/data/All.site.data-withagemodel-finalv2.txt", sep="\t", header=T)
+siteLocs<- SpatialPoints(sites[,c('Longitude','Latitude')], proj4string = CRS("+proj=longlat +datum=WGS84"))
+siteLocs<- spTransform(siteLocs, albersCRS)
 
+for (i in length(allTimes):2){
+  t1<- allTimes[i]
+  t2<- allTimes[i-1]
+  
+  climVeloc<- stack(paste(climateDir, "/Climate Velocity/", var, "-", t1, "-", t2, ".tif", sep=""))
+  names(climVeloc)<- c("temporalGrad", "spatialGrad", "Velocity", "BRNG")
+  
+  climChange<- extract(climVeloc$temporalGrad, siteLocs)
+  climateChange[i-1]<- cellStats(climVeloc$temporalGrad, stat="mean", na.rm=T)
+}
+climateChange<- climateChange[42:1]
 
+plot(richChange~climateChange, pch=16)
+summary(lm(richChange~climateChange))
+# no relationship.  But, this ic climate change averaged across the whole US.  
+# What about at the actual locations of the sites?
+# OK, getting closer, but it's still calling all points for all times, not the points used in each slice
 
 
 
