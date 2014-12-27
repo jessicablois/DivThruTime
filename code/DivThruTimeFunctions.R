@@ -1,9 +1,10 @@
 #### Diversity Thru Time Functions ####
 
 #### calcSiteRichness ####
-calcSiteRichness<- function(dat, minTime, maxTime, pollenThreshold){
-  allTimes<- seq(0, 21000, by=500)
-  siteTimes<- seq(minTime, maxTime, by=500)
+calcSiteRichness<- function(dat, minTime, maxTime, pollenThreshold, interval){
+  interval<- 1000
+  allTimes<- seq(0, 21000, by=interval)
+  siteTimes<- seq(minTime, maxTime, by=interval)
   
   datRev<- as.matrix(dat[,-1]) # remove times and convert to matrix
   matchOrder<- match(colnames(datRev), names(pollenThreshold))
@@ -16,6 +17,7 @@ calcSiteRichness<- function(dat, minTime, maxTime, pollenThreshold){
   }
   
   datRichness<- rowSums(datRev) #calculate genus richness for each time (row)
+  datRichness<- datRichness[match(siteTimes, dat[,1])]
   
   fullRich<- as.vector(rep(NaN, length(allTimes)), mode="numeric")
   fullRich[match(siteTimes, allTimes)]<- datRichness  

@@ -15,22 +15,25 @@ pollenDir<- "~/Dropbox/Research/Community Paleomodels/projects/pollen/output/all
 files<- list.files(path=pollenDir, pattern="gdm.data")
 
 sites<- gsub(".gdm.data.csv", "", files)
-allTimes<- seq(0, 21000, by=500)
+interval<- 1000
+allTimes<- seq(0, 21000, by=interval)
 
 richness<- matrix(ncol=length(allTimes), nrow=length(sites))
 colnames(richness)<- allTimes
 rownames(richness)<- sites
+
 
 for (i in 1:length(sites)){
   sitePath<- files[match(sites[i], gsub(".gdm.data.csv", "", files))]
   dat<- read.csv(paste(pollenDir, sitePath, sep="")) #read data
   datTimes<- dat[,1] # pull out time periods
   
-  minTime<- min(datTimes)
-  maxTime<- max(datTimes)
+  matchedTimes<- allTimes[na.omit(match(datTimes, allTimes))]
+  
+  minTime<- min(matchedTimes)
+  maxTime<- max(matchedTimes)
 
-  richness[i,]<- calcSiteRichness(dat, minTime, maxTime, pollenThreshold)
-   
+  richness[i,]<- calcSiteRichness(dat, minTime, maxTime, pollenThreshold, interval) 
 }
 
 
