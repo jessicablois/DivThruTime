@@ -103,7 +103,7 @@ for (i in 1:length(sites)){
     
 }
 
-pdf(file="figures/rose-diagrams.pdf", 
+pdf(file="figures/rose-diagrams.pdf", height=3, width=6)
 par(mfrow=c(1,3))
 x<- circular(bearingMeans[,1], type="directions", units="degrees", template="geographics") 
 rose.diag(x, bins = 18, main = 'Additions')
