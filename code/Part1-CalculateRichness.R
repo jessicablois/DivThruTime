@@ -2,6 +2,12 @@
 source("code/Part0-GlobalParam.R")
 source("code/DivThruTimeFunctions.R")
 
+# Do you want to restrict analysis to sites with X number of samples?
+restrict <- "yes"
+if (restrict =="yes"){
+  minSamp <- 6
+}
+
 # Calculate richness at each site
 richness<- matrix(ncol=length(allTimes), nrow=length(sites))
 colnames(richness)<- allTimes
@@ -23,6 +29,15 @@ for (i in 1:length(sites)){
     richness[i,]<- calcSiteRichness(dat, minTime, maxTime, pollenThreshold, interval) 
   }
 }
+
+#### restrict analysis to sites with at least 6 samples ####
+if (restrict == "yes"){
+  pa <- richness
+  pa[which(richness > 0)] <- 1
+  noSamp <- rowSums(pa, na.rm=T)
+  richness<- richness[which(noSamp >= minSamp),]
+}
+
 
 richnessMeans<- colMeans(richness, na.rm=T)
 
@@ -67,11 +82,13 @@ for (i in 1:nrow(propRichChanges)){
   propRichChanges[i,]<- round(siteRichChanges[i,]/richness[i,2:ncol(richness)],3)
 }
 
-save(list=c("richness", "richnessMeans", "sampSize", "sigPos", "sigNeg", "nonSig", "siteRichChanges", "propRichChanges"), file="workspaces/richness.RData")
+propRichMeans<- colMeans(propRichChanges, na.rm=T)
 
+save(list=c("richness", "richnessMeans", "sampSize", "sigPos", "sigNeg", "nonSig", "siteRichChanges", "propRichChanges", "propRichMeans"), file="workspaces/richness.RData")
 
 
 #### plot spatial patterns of richness change ####
+
 for (j in 1:ncol(siteRichChanges)){
   specificLocs<- siteLocs[match(rownames(siteRichChanges), sites)]
   plot(siteRichChanges[,j]~specificLocs@coords[,2], pch=16)
@@ -164,27 +181,6 @@ lines(negRichnessMeans~allTimes, col="black", lwd=2)
 dev.off()
 
 
-#Plot each individual line
-
-pdf(file="figures/RichnessThruTime-upper-vs-lower-withLines.pdf", height=4, width=6)
-plot(richnessMeans ~ allTimes, 
-     xlim=c(21000,0), ylim=c(0, max(richness, na.rm=T)), 
-     type="n", 
-     xlab="Time slice (kyr BP)", ylab="Mean Genus Richness")
-for (i in 1:nrow(upperRich)){
-  lines(upperRich[i,]~allTimes, col="red", lty=2) 
-}
-lines(upperRichMean~allTimes, col="red", lwd=3)
-
-for (i in 1:nrow(lowerRich)){
-  lines(lowerRich[i,]~allTimes, col="blue", lty=2) 
-}
-lines(lowerRichMean~allTimes, col="blue", lwd=3)
-lines(richnessMeans~allTimes, col="black", lwd=2)
-dev.off()
-
-colorRampPalette(c("#FF0000FF", "#00FF00FF"))(11)
-colorRampPalette(c("#00FFFFFF", "#FF00FFFF"))(11)
 
 #### Plot the increasing vs decreasing sites ####
 pdf(file="figures/RichnessThruTime-DECREASING.pdf", height=9, width=10)
@@ -220,6 +216,56 @@ for (k in 1:length(nonSig)){
 }
 dev.off()
 
+#### Question: Do sites show most significant proportional change at the same times? ####
+#### And do these changes correspond to times with greatest climate change?
+
+timeStep<- as.numeric(colnames(siteRichChanges))
+
+#Plot each individual line
+pdf(file="figures/PropRichnessThruTime-all-withLines.pdf", height=4, width=6)
+par(mfrow=c(1,1))
+plot(propRichMeans ~ timeStep, 
+     xlim=c(21000,0), ylim=c(0, max(propRichChanges, na.rm=T)), 
+     type="n", 
+     xlab="Time slice (yr BP)", ylab="Mean Proportional Richness Change")
+for (i in 1:nrow(propRichChanges)){
+  lines(propRichChanges[i,]~timeStep, col=rainbow(nrow(propRichChanges))[i]) 
+}
+lines(propRichMeans~timeStep, col="black", lwd=2)
+dev.off()
+
+# Determine number of sites showing >= 25% change in richness
+noOverallSites <- vector(length=length(timeStep))
+noPosSites <- vector(length=length(timeStep))
+noNegSites <- vector(length=length(timeStep))
+propPosSites <- vector(length=length(timeStep))
+propNegSites <- vector(length=length(timeStep))
+
+for (j in 1:ncol(propRichChanges)){
+  noOverallSites[j] <- length(which(!is.na(propRichChanges[,j])))
+  noPosSites[j] <- length(which(propRichChanges[ ,j] >= .25))
+  propPosSites[j] <- noPosSites[j] / noOverallSites[j]
+  noNegSites[j] <- length(which(propRichChanges[ ,j] <= -.25))
+  propNegSites[j] <- noNegSites[j] / noOverallSites[j]
+}
+
+par(mfrow=c(2,1))
+plot(noPosSites~timeStep,
+     xlim=c(21000,0), ylim=c(0, max(noOverallSites)), 
+     pch=16, col="red", 
+     xlab="Time step starting (yr BP)", ylab="Number of sites with >25% change")
+points(noNegSites~timeStep,
+       xlim=c(21000,0), ylim=c(0, max(noPosSites, noNegSites)), 
+       pch=16, col="blue")
+points(noOverallSites~timeStep, pch=16, col="gray")
+
+plot(propPosSites~timeStep,
+     xlim=c(21000,0), ylim=c(0, max(propPosSites, propNegSites)), 
+     type="l", col="red", 
+     xlab="Time step starting (yr BP)", ylab="Proportion of sites with >25% change")
+points(propNegSites~timeStep,
+       xlim=c(21000,0), ylim=c(0, max(propPosSites, propNegSites)), 
+       type="l", col="blue")
 
 
 #spatially plot the positives, negatives, and neutrals
