@@ -30,71 +30,73 @@ for (i in 1:length(sites)){
   }
 }
 
+richness<- richness[,22:1]  # switch richness dataframe to run from past to present
+richness<- t(richness)
+
 #### restrict analysis to sites with at least 6 samples ####
 if (restrict == "yes"){
   pa <- richness
-  pa[which(richness > 0)] <- 1
-  noSamp <- rowSums(pa, na.rm=T)
-  richness<- richness[which(noSamp >= minSamp),]
+  pa[which(pa > 0)] <- 1
+  noSamp <- colSums(pa, na.rm=T)
+  richness<- richness[,which(noSamp >= minSamp)]
 }
 
-
-richnessMeans<- colMeans(richness, na.rm=T)
+richnessMeans<- rowMeans(richness, na.rm=T)
 
 # Calculate sample size
-sampSize<- apply(richness, 2, sampleSize)
+sampSize<- apply(richness, 1, sampleSize)
 
 #### at which sites is diversity increasing or decreasing? ####
-timesKYR<- allTimes/1000
-linearSlopes<- vector(length=nrow(richness))
-pvals<- vector(length=nrow(richness))
-for (i in 1:nrow(richness)){
-  tempSpp<- richness[i,]
-  if (length(which(!is.na(richness[i,])))>2){ #if there are more than two points, fit a model and store the slope
-    lin.mod <- lm(tempSpp~timesKYR)
-    plot(tempSpp~timesKYR, pch=16, ylim=c(0, max(richness, na.rm=T)))
+timeKYR<- rev(allTimes/1000)
+richMat<- cbind(timeKYR, richness)
+
+linearSlopes<- vector(length=ncol(richness)) # each site has a slope
+pvals<- vector(length=ncol(richness))  # each site has a p value
+
+for (i in 2:ncol(richMat)){
+  if (length(which(!is.na(richMat[,i])))>2){ #if there are more than two points, fit a model and store the slope
+    lin.mod <- lm(richMat[,i]~richMat[,1])
+    plot(richMat[,i]~richMat[,1], xlim=c(21,0), pch=16, ylim=c(0, max(richMat[,-1], na.rm=T)))
     abline(lin.mod)
-    linearSlopes[i]<- lin.mod$coefficients[2]
-    pvals[i]<- summary(lin.mod)$coefficients[8]
+    linearSlopes[i-1]<- -(lin.mod$coefficients[2])  #need to make this the opposite of original to have time running forward
+    pvals[i-1]<- summary(lin.mod)$coefficients[8]
   }else{
-    linearSlopes[i]<- NaN
-    pvals[i]<- NaN
+    linearSlopes[i-1]<- NaN
+    pvals[i-1]<- NaN
   }
 }
 
 significants<- which(pvals<=0.05)
-positives<- which(linearSlopes>0) #these are sites that show DECREASING RICHNESS through time
-negatives<- which(linearSlopes< 0) #these are sites that show INCREASING RICHNESS through time
+positives<- which(linearSlopes>0) #these are sites that show INCREASING RICHNESS through time
+negatives<- which(linearSlopes< 0) #these are sites that show DECREASING RICHNESS through time
 neutrals<- which(linearSlopes==0)
 
-sigPos<- intersect(significants, positives) #these are sites that show DECREASING RICHNESS through time
-sigNeg<- intersect(significants, negatives) #these are sites that show INCREASING RICHNESS through time
+sigPos<- intersect(significants, positives) #these are sites that show INCREASING RICHNESS through time
+sigNeg<- intersect(significants, negatives) #these are sites that show DECREASING RICHNESS through time
 nonSig<- seq(1:length(linearSlopes))[-union(sigPos, sigNeg)]
 
-posRichnessMeans<- colMeans(richness[sigPos,], na.rm=T)
-negRichnessMeans<- colMeans(richness[sigNeg,], na.rm=T)
-nonSigRichnessMeans<- colMeans(richness[nonSig,], na.rm=T)
+posRichnessMeans<- rowMeans(richness[,sigPos], na.rm=T)
+negRichnessMeans<- rowMeans(richness[,sigNeg], na.rm=T)
+nonSigRichnessMeans<- rowMeans(richness[,nonSig], na.rm=T)
 
-siteRichChanges<- -(richness[,2:22]-richness[,1:21])
-propRichChanges<- matrix(nrow=nrow(siteRichChanges), ncol=ncol(siteRichChanges))
+richZeros <- richness
+richZeros[which(is.na(richZeros))]<- 0
+siteRichChanges<- -(richZeros[1:21,]-richZeros[2:22,])
+propRichChanges<- siteRichChanges/richness[1:21, ]
 
-for (i in 1:nrow(propRichChanges)){
-  propRichChanges[i,]<- round(siteRichChanges[i,]/richness[i,2:ncol(richness)],3)
-}
-
-propRichMeans<- colMeans(propRichChanges, na.rm=T)
+propRichMeans<- rowMeans(propRichChanges, na.rm=T)
 
 save(list=c("richness", "richnessMeans", "sampSize", "sigPos", "sigNeg", "nonSig", "siteRichChanges", "propRichChanges", "propRichMeans"), file="workspaces/richness.RData")
 
 
 #### plot spatial patterns of richness change ####
 
-for (j in 1:ncol(siteRichChanges)){
-  specificLocs<- siteLocs[match(rownames(siteRichChanges), sites)]
-  plot(siteRichChanges[,j]~specificLocs@coords[,2], pch=16)
-  summary(lm(siteRichChanges[,j]~specificLocs@coords[,2]))  
+par(mfrow=c(5,5))
+for (j in 1:nrow(siteRichChanges)){
+  specificLocs<- siteLocs[match(colnames(siteRichChanges), sites)]
+  plot(siteRichChanges[j,]~specificLocs@coords[,2], pch=16) #plot richness change as a function of latitude
+  summary(lm(siteRichChanges[j,]~specificLocs@coords[,2]))  
 }
-
 
 
 #### Plotting ####
@@ -267,6 +269,10 @@ points(propNegSites~timeStep,
        xlim=c(21000,0), ylim=c(0, max(propPosSites, propNegSites)), 
        type="l", col="blue")
 
+# Is there a relationship between times with lots of positive and negative change?
+cor.test(propNegSites, propPosSites)
+plot(propNegSites~propPosSites, pch=16)
+abline(lm(propNegSites~propPosSites))
 
 #spatially plot the positives, negatives, and neutrals
 library(sp)
