@@ -2,7 +2,7 @@
 
 #### calcSiteRichness ####
 calcSiteRichness<- function(dat, minTime, maxTime, pollenThreshold, interval){
-  interval<- 1000
+  interval<- 500
   allTimes<- seq(0, 21000, by=interval)
   siteTimes<- seq(minTime, maxTime, by=interval)
   

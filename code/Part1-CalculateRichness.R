@@ -30,7 +30,7 @@ for (i in 1:length(sites)){
   }
 }
 
-richness<- richness[,22:1]  # switch richness dataframe to run from past to present
+richness<- richness[,ncol(richness):1]  # switch richness dataframe to run from past to present
 richness<- t(richness)
 
 #### restrict analysis to sites with at least 6 samples ####
@@ -81,22 +81,13 @@ nonSigRichnessMeans<- rowMeans(richness[,nonSig], na.rm=T)
 
 richZeros <- richness
 richZeros[which(is.na(richZeros))]<- 0
-siteRichChanges<- -(richZeros[1:21,]-richZeros[2:22,])
-propRichChanges<- siteRichChanges/richness[1:21, ]
+siteRichChanges<- -(richZeros[1:(nrow(richZeros)-1),]-richZeros[2:nrow(richZeros),])
+propRichChanges<- siteRichChanges/richness[1:(nrow(richZeros)-1), ]
 
 propRichMeans<- rowMeans(propRichChanges, na.rm=T)
 
 save(list=c("richness", "richnessMeans", "sampSize", "sigPos", "sigNeg", "nonSig", "siteRichChanges", "propRichChanges", "propRichMeans"), file="workspaces/richness.RData")
 
-
-#### plot spatial patterns of richness change ####
-
-par(mfrow=c(5,5))
-for (j in 1:nrow(siteRichChanges)){
-  specificLocs<- siteLocs[match(colnames(siteRichChanges), sites)]
-  plot(siteRichChanges[j,]~specificLocs@coords[,2], pch=16) #plot richness change as a function of latitude
-  summary(lm(siteRichChanges[j,]~specificLocs@coords[,2]))  
-}
 
 
 #### Plotting ####
@@ -110,75 +101,75 @@ dev.off()
 # Plot the mean genus richness across all sites and overlay sample size
 pdf(file="figures/RichnessSampSizeThruTime-all.pdf", height=4, width=6)
 par(mar=c(4,4,4,4)+0.1)
-plot(richnessMeans~allTimes, type="l", xlim=c(21000,0), xlab="Time slice (yr BP)", ylab="Mean Genus Richness")
+plot(richnessMeans~timeKYR, type="l", xlim=c(21,0), xlab="Time slice (kyr BP)", ylab="Mean Genus Richness")
 par(new=T)
-plot(sampSize~allTimes, pch=16, col="red", ylim=c(0, max(sampSize)), xlim=c(21000,0), axes=F, xlab="", ylab="")
-axis(4, at=seq(0, max(sampSize), by=100), col.axis="red")
-mtext("Number of Sites", 4, line=3, col="red")
+plot(sampSize~timeKYR, pch=16, col="darkgray", ylim=c(0, max(sampSize)), xlim=c(21,0), axes=F, xlab="", ylab="", cex=0.75)
+axis(4, at=seq(0, max(sampSize), by=100), col.axis="darkgray")
+mtext("Number of Sites", 4, line=3, col="darkgray")
 dev.off()
 
 #Plot each individual line
 pdf(file="figures/RichnessThruTime-all-withLines.pdf", height=4, width=6)
 par(mfrow=c(1,1))
-plot(richnessMeans ~ allTimes, 
-     xlim=c(21000,0), ylim=c(0, max(richness, na.rm=T)), 
+plot(richnessMeans ~ timeKYR, 
+     xlim=c(21,0), ylim=c(0, max(richness, na.rm=T)), 
      type="n", 
-     xlab="Time slice (yr BP)", ylab="Mean Genus Richness")
-for (i in 1:nrow(richness)){
-  lines(richness[i,]~allTimes, col=rainbow(nrow(richness))[i]) 
+     xlab="Time slice (kyr BP)", ylab="Mean Genus Richness")
+for (i in 1:ncol(richness)){
+  lines(richness[,i]~timeKYR, col=rainbow(nrow(richness))[i]) 
 }
-lines(richnessMeans~allTimes, col="black", lwd=2)
+lines(richnessMeans~timeKYR, col="black", lwd=2)
 dev.off()
 
 #Plot each individual line- sig pos vs sig neg
 pdf(file="figures/RichnessThruTime-all-withPosNegLines.pdf", height=4, width=6)
 par(mfrow=c(1,1))
-plot(richnessMeans ~ allTimes, 
-     xlim=c(21000,0), ylim=c(0, max(richness, na.rm=T)), 
+plot(richnessMeans ~ timeKYR, 
+     xlim=c(21,0), ylim=c(0, max(richness, na.rm=T)), 
      type="n", 
      xlab="Time slice (yr BP)", ylab="Mean Genus Richness")
 for (k in 1:length(nonSig)){
-  lines(richness[nonSig[k],]~allTimes, col="gray")
+  lines(richness[,nonSig[k]]~timeKYR, col="gray")
 }
 for (k in 1:length(sigPos)){
-  lines(richness[sigPos[k],]~allTimes, col="blue")
+  lines(richness[,sigPos[k]]~timeKYR, col="blue")
 }
 for (k in 1:length(sigNeg)){
-  lines(richness[sigNeg[k],]~allTimes, col="red")
+  lines(richness[,sigNeg[k]]~timeKYR, col="red")
 }
-lines(richnessMeans~allTimes, col="black", lwd=2)
+lines(richnessMeans~timeKYR, col="black", lwd=2)
 dev.off()
 
 pdf(file="figures/RichnessThruTime-threePanels-withPosNegLines.pdf", height=4, width=6)
 par(mfrow=c(1,3))
-plot(richnessMeans ~ allTimes, 
-     xlim=c(21000,0), ylim=c(0, max(richness, na.rm=T)), 
+plot(richnessMeans ~ timeKYR, 
+     xlim=c(21,0), ylim=c(0, max(richness, na.rm=T)), 
      type="n", 
      xlab="Time slice (yr BP)", ylab="Mean Genus Richness")
 for (k in 1:length(nonSig)){
-  lines(richness[nonSig[k],]~allTimes, col="gray")
+  lines(richness[,nonSig[k]]~timeKYR, col="gray")
 }
-lines(nonSigRichnessMeans~allTimes, col="black", lwd=2)
+lines(nonSigRichnessMeans~timeKYR, col="black", lwd=2)
 
-coolPalette<- colorRampPalette(c("green", "blue"))(21)
-plot(richnessMeans ~ allTimes, 
-     xlim=c(21000,0), ylim=c(0, max(richness, na.rm=T)), 
+coolPalette<- colorRampPalette(c("green", "blue"))(43)
+plot(richnessMeans ~ timeKYR, 
+     xlim=c(21,0), ylim=c(0, max(richness, na.rm=T)), 
      type="n", 
      xlab="Time slice (yr BP)", ylab="Mean Genus Richness")
 for (k in 1:length(sigPos)){
-  lines(richness[sigPos[k],]~allTimes, col=coolPalette[max(which(!is.na(richness[sigPos[k],])))-1])
+  lines(richness[,sigPos[k]]~timeKYR, col=coolPalette[max(which(!is.na(richness[,sigPos[k]])))-1])
 }
-lines(posRichnessMeans~allTimes, col="black", lwd=2)
+lines(posRichnessMeans~timeKYR, col="black", lwd=2)
 
-warmPalette<- colorRampPalette(c("red", "orange"))(21)
-plot(richnessMeans ~ allTimes, 
-     xlim=c(21000,0), ylim=c(0, max(richness, na.rm=T)), 
+warmPalette<- colorRampPalette(c("red", "orange"))(43)
+plot(richnessMeans ~ timeKYR, 
+     xlim=c(21,0), ylim=c(0, max(richness, na.rm=T)), 
      type="n", 
      xlab="Time slice (yr BP)", ylab="Mean Genus Richness")
 for (k in 1:length(sigNeg)){
-  lines(richness[sigNeg[k],]~allTimes, col=warmPalette[max(which(!is.na(richness[sigNeg[k],])))-1])
+  lines(richness[,sigNeg[k]]~timeKYR, col=warmPalette[max(which(!is.na(richness[,sigNeg[k]])))-1])
 }
-lines(negRichnessMeans~allTimes, col="black", lwd=2)
+lines(negRichnessMeans~timeKYR, col="black", lwd=2)
 
 dev.off()
 
@@ -188,53 +179,55 @@ dev.off()
 pdf(file="figures/RichnessThruTime-DECREASING.pdf", height=9, width=10)
 par(mfrow=c(3,3), mar=c(4,4,1,1)+0.1)
 for (k in 1:length(sigPos)){
-  plot(richness[sigPos[k],]~allTimes, 
+  plot(richness[,sigPos[k]]~timeKYR, 
        type="l", 
-       ylim=c(0, max(richness, na.rm=T)),
+       ylim=c(0, max(richness, na.rm=T)), xlim=c(21,0),
        xlab="", ylab="Site Richness")
-  mtext(rownames(richness)[sigPos[k]], side=3, line=-1.5, adj=1, cex=0.75)
+  mtext(colnames(richness)[sigPos[k]], side=3, line=-1.5, adj=1, cex=0.75)
 }
 dev.off()
 
 pdf(file="figures/RichnessThruTime-INCREASING.pdf", height=9, width=10)
 par(mfrow=c(3,3), mar=c(4,4,1,1)+0.1)
 for (k in 1:length(sigNeg)){
-  plot(richness[sigNeg[k],]~allTimes, 
+  plot(richness[,sigNeg[k]]~timeKYR, 
        type="l", 
-       ylim=c(0, max(richness, na.rm=T)),
+       ylim=c(0, max(richness, na.rm=T)), xlim=c(21,0),
        xlab="", ylab="Site Richness")
-  mtext(rownames(richness)[sigNeg[k]], side=3, line=-1.5, adj=1, cex=0.75)
+  mtext(colnames(richness)[sigNeg[k]], side=3, line=-1.5, adj=1, cex=0.75)
 }
 dev.off()
 
 pdf(file="figures/RichnessThruTime-nonSig.pdf", height=9, width=10)
 par(mfrow=c(3,3), mar=c(4,4,1,1)+0.1)
 for (k in 1:length(nonSig)){
-  plot(richness[nonSig[k],]~allTimes, 
+  plot(richness[,nonSig[k]]~timeKYR, 
        type="l", 
        ylim=c(0, max(richness, na.rm=T)),
        xlab="", ylab="Site Richness")
-  mtext(rownames(richness)[nonSig[k]], side=3, line=-1.5, adj=1, cex=0.75)
+  mtext(colnames(richness)[nonSig[k]], side=3, line=-1.5, adj=1, cex=0.75)
 }
 dev.off()
 
 #### Question: Do sites show most significant proportional change at the same times? ####
 #### And do these changes correspond to times with greatest climate change?
 
-timeStep<- as.numeric(colnames(siteRichChanges))
+timeStep<- as.numeric(rownames(siteRichChanges))
 
 #Plot each individual line
 pdf(file="figures/PropRichnessThruTime-all-withLines.pdf", height=4, width=6)
 par(mfrow=c(1,1))
 plot(propRichMeans ~ timeStep, 
-     xlim=c(21000,0), ylim=c(0, max(propRichChanges, na.rm=T)), 
+     xlim=c(21000,0), ylim=c(min(propRichChanges, na.rm=T), max(propRichChanges, na.rm=T)), 
      type="n", 
      xlab="Time slice (yr BP)", ylab="Mean Proportional Richness Change")
-for (i in 1:nrow(propRichChanges)){
-  lines(propRichChanges[i,]~timeStep, col=rainbow(nrow(propRichChanges))[i]) 
+for (i in 1:ncol(propRichChanges)){
+  lines(propRichChanges[,i]~timeStep, col=rainbow(nrow(propRichChanges))[i]) 
 }
 lines(propRichMeans~timeStep, col="black", lwd=2)
 dev.off()
+
+
 
 # Determine number of sites showing >= 25% change in richness
 noOverallSites <- vector(length=length(timeStep))
@@ -243,11 +236,11 @@ noNegSites <- vector(length=length(timeStep))
 propPosSites <- vector(length=length(timeStep))
 propNegSites <- vector(length=length(timeStep))
 
-for (j in 1:ncol(propRichChanges)){
-  noOverallSites[j] <- length(which(!is.na(propRichChanges[,j])))
-  noPosSites[j] <- length(which(propRichChanges[ ,j] >= .25))
+for (j in 1:nrow(propRichChanges)){
+  noOverallSites[j] <- length(which(!is.na(propRichChanges[j, ])))
+  noPosSites[j] <- length(which(propRichChanges[j, ] >= .25))
   propPosSites[j] <- noPosSites[j] / noOverallSites[j]
-  noNegSites[j] <- length(which(propRichChanges[ ,j] <= -.25))
+  noNegSites[j] <- length(which(propRichChanges[j, ] <= -.25))
   propNegSites[j] <- noNegSites[j] / noOverallSites[j]
 }
 
@@ -273,6 +266,11 @@ points(propNegSites~timeStep,
 cor.test(propNegSites, propPosSites)
 plot(propNegSites~propPosSites, pch=16)
 abline(lm(propNegSites~propPosSites))
+
+### NEXT STEPS: plot the density of different rates of change with time periods ####
+# need a big two column dataframe: column 1 is the time step, column two is the change.  
+# maybe three columns: time step, positive proportional changes, negative proportional changes.
+
 
 #spatially plot the positives, negatives, and neutrals
 library(sp)
@@ -381,6 +379,19 @@ lines(negRichnessMeans~allTimes, col="black", lwd=2)
 
 
 dev.off()
+
+
+
+
+#### plot spatial patterns of richness change ####
+
+par(mfrow=c(5,5))
+for (j in 1:nrow(siteRichChanges)){
+  specificLocs<- siteLocs[match(colnames(siteRichChanges), sites)]
+  plot(siteRichChanges[j,]~specificLocs@coords[,2], pch=16) #plot richness change as a function of latitude
+  summary(lm(siteRichChanges[j,]~specificLocs@coords[,2]))  
+}
+
 
 
 
