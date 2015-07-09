@@ -228,7 +228,6 @@ lines(propRichMeans~timeStep, col="black", lwd=2)
 dev.off()
 
 
-
 # Determine number of sites showing >= 25% change in richness
 noOverallSites <- vector(length=length(timeStep))
 noPosSites <- vector(length=length(timeStep))
@@ -267,11 +266,21 @@ cor.test(propNegSites, propPosSites)
 plot(propNegSites~propPosSites, pch=16)
 abline(lm(propNegSites~propPosSites))
 
-### NEXT STEPS: plot the density of different rates of change with time periods ####
+### plot the density of different rates of change with time periods ####
 # need a big two column dataframe: column 1 is the time step, column two is the change.  
 # maybe three columns: time step, positive proportional changes, negative proportional changes.
+proportionDF<- matrix(ncol=2, nrow=NULL)
+for (i in 1:ncol(propRichChanges)){
+  temp<- as.data.frame(cbind(as.numeric(rownames(propRichChanges)), propRichChanges[,i]))
+  proportionDF <- rbind(proportionDF, temp)
+}
+colnames(proportionDF)<- c("TimeStep", "propChange")   
+proportionDF<- proportionDF[-which(is.na(proportionDF$propChange)), ]  
+plot(propChange~TimeStep, data=proportionDF, pch=16)
+#density plot isn't working, or at least, density through time is 0.
 
 
+#### START HERE ####
 #spatially plot the positives, negatives, and neutrals
 library(sp)
 library(rgeos)
