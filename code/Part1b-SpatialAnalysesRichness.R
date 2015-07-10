@@ -1,46 +1,43 @@
+
 load("workspaces/richness.RData")
 source("code/Part0-GlobalParam.R")
 
-#spatially plot the positives, negatives, and neutrals
-library(sp)
 library(rgeos)
+library(maptools)
 
-#siteLocs<- read.delim("~/Dropbox/Research/Community Paleomodels/projects/pollen/data/All.site.data-withagemodel-finalv2.txt", sep="\t", header=T)
-
-# sigPos #these are sites that show DECREASING RICHNESS through time
-# sigNeg #these are sites that show INCREASING RICHNESS through time
+#### Spatially plot the positives, negatives, and neutrals ####
 
 #these are sites with no changes in diversity through time
-spatialNeutrals<- latlongs[match(rownames(richness)[nonSig], latlongs$Handle),]
+spatialNeutrals<- latlongs[match(colnames(richness)[nonSig], latlongs$Handle),]
 coordinates(spatialNeutrals)<- ~Longitude+Latitude
 neutralCentroid<- gCentroid(spatialNeutrals)
 plot(spatialNeutrals, col="lightgray")
-#points(neutralCentroid, col="darkgray", pch=16, cex=1.5)
-
-#these are sites with increases in diversity through time
-spatialNegatives<- latlongs[match(rownames(richness)[sigNeg], latlongs$Handle),]
-coordinates(spatialNegatives)<- ~Longitude+Latitude
-negativeCentroid<- gCentroid(spatialNegatives)
-plot(spatialNegatives, col="blue", add=T)
-#points(negativeCentroid, col="darkblue", pch=16, cex=1.5)
+points(neutralCentroid, col="darkgray", pch=16, cex=1.5)
 
 #these are sites with decreases in diversity through time
-spatialPositives<- latlongs[match(rownames(richness)[sigPos], latlongs$Handle),]
+spatialNegatives<- latlongs[match(colnames(richness)[sigNeg], latlongs$Handle),]
+coordinates(spatialNegatives)<- ~Longitude+Latitude
+negativeCentroid<- gCentroid(spatialNegatives)
+plot(spatialNegatives, col="red", add=T)
+points(negativeCentroid, col="darkred", pch=16, cex=1.5)
+
+#these are sites with increases in diversity through time
+spatialPositives<- latlongs[match(colnames(richness)[sigPos], latlongs$Handle),]
 coordinates(spatialPositives)<- ~Longitude+Latitude
 positiveCentroid<- gCentroid(spatialPositives)
-plot(spatialPositives, col="red", add=T)
-#points(positiveCentroid, col="red", pch=16, cex=1.5)
+plot(spatialPositives, col="blue", add=T)
+points(positiveCentroid, col="darkblue", pch=16, cex=1.5)
 
 
-warmPalette<- colorRampPalette(c("red", "orange"))(21)
-negCols<- apply(richness[sigNeg,], 1, function(x) max(which(!is.na(x))))-1
+warmPalette<- colorRampPalette(c("red", "orange"))(43)
+negCols<- apply(richness[,sigNeg], 2, function(x) max(which(!is.na(x))))-1
 #reds= time series starts younger, orange=time series starts older
 
-coolPalette<- colorRampPalette(c("green", "blue"))(21)
-posCols<- apply(richness[sigPos,], 1, function(x) max(which(!is.na(x))))-1
+coolPalette<- colorRampPalette(c("green", "blue"))(43)
+posCols<- apply(richness[,sigPos], 2, function(x) max(which(!is.na(x))))-1
 #greens= time series starts younger, blues=time series starts older
 
-library(maptools)
+
 data(wrld_simpl)
 pdf(file="figures/Map-RichnessThruTime.pdf", height=9, width=10)
 par(mfrow=c(1,1))
@@ -52,15 +49,9 @@ plot(spatialNeutrals, pch=3, cex=0.75, col="lightgray", add=T)
 plot(spatialNegatives, pch=15, col=warmPalette[negCols], add=T)
 plot(spatialPositives, pch=17, col=coolPalette[posCols], add=T)
 
-legend("bottom", pch=c(rep(15, 7), 3, rep(17, 7)), col=c(warmPalette[seq(21,1, -3)], "gray", (coolPalette[seq(3,21, 3)])), 
-       legend=c(seq(21,1, -3), 0, seq(3,21, 3)), cex=0.75, horiz=T)
+legend("bottom", pch=c(rep(15, 8), 3, rep(17, 8)), col=c(warmPalette[seq(43,1, -6)], "gray", (coolPalette[seq(1,43, 6)])), 
+       legend=timeKYR[c(seq(43,1, -6)], 0, seq(1,43, 6))], cex=0.75, horiz=T)
 
-
-# legend("bottomright", pch=16, cex=0.75,
-#        col=c("red", "blue", "gray"), 
-#        c("Richness increases",
-#          "Richness decreases", 
-#          "No richness change"))
 
 dev.off()
 
