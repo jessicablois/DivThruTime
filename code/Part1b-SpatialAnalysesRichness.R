@@ -113,7 +113,68 @@ for (j in 1:nrow(siteRichChanges)){
 }
 
 
-#### New analyses ####
+#### Regional analyses ####
 # superimpose present-day biome map to delimit regions, then examine richness changes within them
 # determine whether same set of species are involved in majority of colonizations or extirpations
+# Need to be in Albers
+library(maptools)
 
+#read in biome layer
+biomes<- readShapePoly("~/Dropbox/Research-Wisconsin/GIS Data/TerrestrialEcoregions/NorthAmerica_ecoregions.shp", proj4string=originalCRS) 
+
+#reproject everything to AlbersCRS
+biomesSp<- spTransform(biomes, albersCRS)
+
+#convert biomes (column 6) to factor for plotting
+biomesSp@data[,6]<- as.factor(biomesSp@data[,6])
+biome.list.full<- levels(biomesSp$BIOME)
+biomeCols<- terrain.colors(length(biome.list.full))
+
+plot(biomesSp)
+points(siteLocs, col="red")
+
+biomeAtLocs<- over(siteLocs, biomesSp)
+biomesinSamp<- as.numeric(as.character(biomeAtLocs$BIOME))
+biome.list.sites<- as.numeric(na.omit(unique(biomesinSamp)))
+
+if (restrict == "yes"){  #need to trim out sites with low sampling, the same as in Part 1a.
+  biomesinSamp<- biomesinSamp[which(noSamp >= minSamp)] #values should be carried over in richness workspace
+  biome.list.sites<- as.numeric(na.omit(unique(biomesinSamp)))
+}
+
+biomeMeanRichness <- matrix(ncol=length(biome.list.sites), nrow=nrow(richness))
+for (i in 1:length(biome.list.sites)){
+  if (!is.vector(richness[,which(biomesinSamp==biome.list.sites[i])])){
+    biomeMeanRichness[,i] <- rowMeans(richness[,which(biomesinSamp==biome.list.sites[i])], na.rm=T)
+  }
+  if (is.vector(richness[,which(biomesinSamp==biome.list.sites[i])])){
+    biomeMeanRichness[,i] <- richness[,which(biomesinSamp==biome.list.sites[i])]
+  }
+}
+colnames(biomeMeanRichness) <- biome.list.sites
+rownames(biomeMeanRichness) <- rownames(richness)
+
+pdf(file="figures/RichnessByBiome.pdf", height=4, width=6)
+
+plotCols<- rainbow(length(biome.list.sites)-1)
+plotCols<- c(plotCols, "gray")
+
+biomeSampSize <- vector(length=length(biome.list.sites))
+for (i in 1:length(biome.list.sites)-1){
+  biomeSampSize[i] <- ncol(richness[,which(biomesinSamp==biome.list.sites[i])])
+}
+biomeSampSize[7]<- 1
+
+par(mar=c(4,4,4,4)+0.1)
+plot(biomeMeanRichness[,1]~timeNeg, type="n", xlim=c(-21000,0), ylim=c(0, max(biomeMeanRichness, na.rm=T)),
+     xlab="Time slice (yr BP)", ylab="Mean Genus Richness")
+for (i in 1:length(biome.list.sites)){
+  lines(biomeMeanRichness[,i]~timeNeg, pch=16, col=plotCols[i])
+}
+lines(richnessMeans ~ timeNeg, lwd=1.5, col="black")
+legend("bottomleft", bty="n", paste("biome=",biome.list.sites, " (", biomeSampSize, " sites)", sep=""), col=plotCols, lwd=1, cex=0.75)
+
+dev.off()
+
+
+ncol(richness[,which(biomesinSamp==biome.list.sites[i])])
