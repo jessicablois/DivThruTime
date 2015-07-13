@@ -113,3 +113,7 @@ for (j in 1:nrow(siteRichChanges)){
 }
 
 
+#### New analyses ####
+# superimpose present-day biome map to delimit regions, then examine richness changes within them
+# determine whether same set of species are involved in majority of colonizations or extirpations
+

@@ -14,9 +14,9 @@ var<- "tmax_year_ave"
 
 siteClimChanges<- matrix(nrow=nrow(siteRichChanges), ncol=ncol(siteRichChanges))
 
-for (k in 1:ncol(siteRichChanges)){
-  t1<- as.numeric(colnames(siteRichChanges)[k])
-  t2<- t1-1000
+for (k in 1:nrow(siteRichChanges)){
+  t1<- as.numeric(rownames(siteRichChanges)[k])
+  t2<- t1-500
   
   #read in climate data and extract values from shared sites
   climVeloc<- stack(paste(climateDir, "/Climate Velocity/", var, "-", t1, "-", t2, ".tif", sep=""))

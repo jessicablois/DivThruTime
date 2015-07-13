@@ -30,7 +30,7 @@ for (i in 1:length(sites)){
   }
 }
 
-richness<- richness[,ncol(richness):1]  # switch richness dataframe to run from past to present
+#richness<- richness[,ncol(richness):1]  # switch richness dataframe to run from past to present
 richness<- t(richness)
 
 #### restrict analysis to sites with at least 6 samples ####
@@ -48,22 +48,21 @@ richnessVar<- apply(richness, 1, var, na.rm=T)
 sampSize<- apply(richness, 1, sampleSize)
 
 #### at which sites is diversity increasing or decreasing? ####
-timeKYR<- rev(allTimes/1000)
-richMat<- cbind(timeKYR, richness)
+timeNeg<- -(as.numeric(rownames(richness)))
 
 linearSlopes<- vector(length=ncol(richness)) # each site has a slope
 pvals<- vector(length=ncol(richness))  # each site has a p value
 
-for (i in 2:ncol(richMat)){
-  if (length(which(!is.na(richMat[,i])))>2){ #if there are more than two points, fit a model and store the slope
-    lin.mod <- lm(richMat[,i]~richMat[,1])
-    plot(richMat[,i]~richMat[,1], xlim=c(21,0), pch=16, ylim=c(0, max(richMat[,-1], na.rm=T)))
+for (i in 1:ncol(richness)){
+  if (length(which(!is.na(richness[,i])))>2){ #if there are more than two points, fit a model and store the slope
+    lin.mod <- lm(richness[,i]~timeNeg)
+    plot(richness[,i]~timeNeg, xlim=c(-21000,0), pch=16, ylim=c(0, max(richness, na.rm=T)))
     abline(lin.mod)
-    linearSlopes[i-1]<- -(lin.mod$coefficients[2])  #need to make this the opposite of original to have time running forward
-    pvals[i-1]<- summary(lin.mod)$coefficients[8]
+    linearSlopes[i]<- (lin.mod$coefficients[2])  
+    pvals[i]<- summary(lin.mod)$coefficients[8]
   }else{
-    linearSlopes[i-1]<- NaN
-    pvals[i-1]<- NaN
+    linearSlopes[i]<- NaN
+    pvals[i]<- NaN
   }
 }
 
@@ -82,12 +81,12 @@ nonSigRichnessMeans<- rowMeans(richness[,nonSig], na.rm=T)
 
 richZeros <- richness
 richZeros[which(is.na(richZeros))]<- 0
-siteRichChanges<- -(richZeros[1:(nrow(richZeros)-1),]-richZeros[2:nrow(richZeros),])
-propRichChanges<- siteRichChanges/richness[1:(nrow(richZeros)-1), ]
+siteRichChanges<- -(richZeros[2:nrow(richZeros),]-richZeros[1:(nrow(richZeros)-1),])
+propRichChanges<- siteRichChanges/richness[2:(nrow(richZeros)), ]
 
 propRichMeans<- rowMeans(propRichChanges, na.rm=T)
 
-timeStep<- as.numeric(rownames(siteRichChanges))
+timeStep<- -(as.numeric(rownames(siteRichChanges)))
 
 # Determine number of sites showing >= 25% change in richness
 noOverallSites <- vector(length=length(timeStep))
@@ -103,6 +102,8 @@ for (j in 1:nrow(propRichChanges)){
   noNegSites[j] <- length(which(propRichChanges[j, ] <= -.25))
   propNegSites[j] <- noNegSites[j] / noOverallSites[j]
 }
+
+## Of sites with significant change, what was the average magnitude of change?
 
 save.image(file="workspaces/richness.RData")
 
@@ -122,9 +123,9 @@ dev.off()
 
 pdf(file="figures/RichnessSampSizeThruTime-all.pdf", height=4, width=6)
 par(mar=c(4,4,4,4)+0.1)
-plot(richnessMeans~timeKYR, type="l", xlim=c(21,0), xlab="Time slice (kyr BP)", ylab="Mean Genus Richness")
+plot(richnessMeans~timeNeg, type="l", xlim=c(-21000,0), xlab="Time slice (yr BP)", ylab="Mean Genus Richness")
 par(new=T)
-plot(sampSize~timeKYR, pch=16, col="darkgray", ylim=c(0, max(sampSize)), xlim=c(21,0), axes=F, xlab="", ylab="", cex=0.75)
+plot(sampSize~timeNeg, pch=16, col="darkgray", ylim=c(0, max(sampSize)), xlim=c(-21000,0), axes=F, xlab="", ylab="", cex=0.75)
 axis(4, at=seq(0, max(sampSize), by=100), col.axis="darkgray")
 mtext("Number of Sites", 4, line=3, col="darkgray")
 dev.off()
@@ -133,35 +134,35 @@ dev.off()
 
 pdf(file="figures/RichnessThruTime-all-withLines.pdf", height=4, width=6)
 par(mfrow=c(1,1))
-plot(richnessMeans ~ timeKYR, 
-     xlim=c(21,0), ylim=c(0, max(richness, na.rm=T)), 
+plot(richnessMeans ~ timeNeg, 
+     xlim=c(-21000,0), ylim=c(0, max(richness, na.rm=T)), 
      type="n", 
-     xlab="Time slice (kyr BP)", ylab="Mean Genus Richness")
+     xlab="Time slice (yr BP)", ylab="Mean Genus Richness")
 for (i in 1:ncol(richness)){
-  lines(richness[,i]~timeKYR, col=rainbow(nrow(richness))[i]) 
+  lines(richness[,i]~timeNeg, col=rainbow(nrow(richness))[i]) 
 }
-lines(richnessMeans~timeKYR, col="black", lwd=2)
+lines(richnessMeans~timeNeg, col="black", lwd=2)
 dev.off()
 
 # Plot each individual site- the increasing vs decreasing vs non sig sites 
 
-pdf(file="figures/RichnessThruTime-DECREASING.pdf", height=9, width=10)
+pdf(file="figures/RichnessThruTime-INCREASING.pdf", height=9, width=10)
 par(mfrow=c(3,3), mar=c(4,4,1,1)+0.1)
 for (k in 1:length(sigPos)){
-  plot(richness[,sigPos[k]]~timeKYR, 
+  plot(richness[,sigPos[k]]~timeNeg, 
        type="l", 
-       ylim=c(0, max(richness, na.rm=T)), xlim=c(21,0),
+       ylim=c(0, max(richness, na.rm=T)), xlim=c(-21000,0),
        xlab="", ylab="Site Richness")
   mtext(colnames(richness)[sigPos[k]], side=3, line=-1.5, adj=1, cex=0.75)
 }
 dev.off()
 
-pdf(file="figures/RichnessThruTime-INCREASING.pdf", height=9, width=10)
+pdf(file="figures/RichnessThruTime-DECREASING.pdf", height=9, width=10)
 par(mfrow=c(3,3), mar=c(4,4,1,1)+0.1)
 for (k in 1:length(sigNeg)){
-  plot(richness[,sigNeg[k]]~timeKYR, 
+  plot(richness[,sigNeg[k]]~timeNeg, 
        type="l", 
-       ylim=c(0, max(richness, na.rm=T)), xlim=c(21,0),
+       ylim=c(0, max(richness, na.rm=T)), xlim=c(-21000,0),
        xlab="", ylab="Site Richness")
   mtext(colnames(richness)[sigNeg[k]], side=3, line=-1.5, adj=1, cex=0.75)
 }
@@ -170,7 +171,7 @@ dev.off()
 pdf(file="figures/RichnessThruTime-nonSig.pdf", height=9, width=10)
 par(mfrow=c(3,3), mar=c(4,4,1,1)+0.1)
 for (k in 1:length(nonSig)){
-  plot(richness[,nonSig[k]]~timeKYR, 
+  plot(richness[,nonSig[k]]~timeNeg, 
        type="l", 
        ylim=c(0, max(richness, na.rm=T)),
        xlab="", ylab="Site Richness")
@@ -182,54 +183,54 @@ dev.off()
 
 pdf(file="figures/RichnessThruTime-all-withPosNegLines.pdf", height=4, width=6)
 par(mfrow=c(1,1))
-plot(richnessMeans ~ timeKYR, 
-     xlim=c(21,0), ylim=c(0, max(richness, na.rm=T)), 
+plot(richnessMeans ~ timeNeg, 
+     xlim=c(-21000,0), ylim=c(0, max(richness, na.rm=T)), 
      type="n", 
      xlab="Time slice (yr BP)", ylab="Mean Genus Richness")
 for (k in 1:length(nonSig)){
-  lines(richness[,nonSig[k]]~timeKYR, col="gray")
+  lines(richness[,nonSig[k]]~timeNeg, col="gray")
 }
 for (k in 1:length(sigPos)){
-  lines(richness[,sigPos[k]]~timeKYR, col="blue")
+  lines(richness[,sigPos[k]]~timeNeg, col="red")
 }
 for (k in 1:length(sigNeg)){
-  lines(richness[,sigNeg[k]]~timeKYR, col="red")
+  lines(richness[,sigNeg[k]]~timeNeg, col="blue")
 }
-lines(richnessMeans~timeKYR, col="black", lwd=2)
+lines(richnessMeans~timeNeg, col="black", lwd=2)
 dev.off()
 
 # Plot richness trajectory at each site- different plots for sig pos vs sig neg
 
-pdf(file="figures/RichnessThruTime-threePanels-withPosNegLines.pdf", height=4, width=6)
+pdf(file="figures/RichnessThruTime-threePanels-withPosNegLines.pdf", height=4, width=8)
 par(mfrow=c(1,3))
-plot(richnessMeans ~ timeKYR, 
-     xlim=c(21,0), ylim=c(0, max(richness, na.rm=T)), 
+plot(richnessMeans ~ timeNeg, 
+     xlim=c(-21000,0), ylim=c(0, max(richness, na.rm=T)), 
      type="n", 
      xlab="Time slice (yr BP)", ylab="Mean Genus Richness")
 for (k in 1:length(nonSig)){
-  lines(richness[,nonSig[k]]~timeKYR, col="gray")
+  lines(richness[,nonSig[k]]~timeNeg, col="gray")
 }
-lines(nonSigRichnessMeans~timeKYR, col="black", lwd=2)
+lines(nonSigRichnessMeans~timeNeg, col="black", lwd=2)
 
-coolPalette<- colorRampPalette(c("green", "blue"))(43)
-plot(richnessMeans ~ timeKYR, 
-     xlim=c(21,0), ylim=c(0, max(richness, na.rm=T)), 
+warmPalette<- colorRampPalette(c("red", "orange"))(43)
+plot(richnessMeans ~ timeNeg, 
+     xlim=c(-21000,0), ylim=c(0, max(richness, na.rm=T)), 
      type="n", 
      xlab="Time slice (yr BP)", ylab="Mean Genus Richness")
 for (k in 1:length(sigPos)){
-  lines(richness[,sigPos[k]]~timeKYR, col=coolPalette[max(which(!is.na(richness[,sigPos[k]])))-1])
+  lines(richness[,sigPos[k]]~ timeNeg, col=warmPalette[max(which(!is.na(richness[,sigPos[k]])))-1]) #this sets the color according to the time the time series begins
 }
-lines(posRichnessMeans~timeKYR, col="black", lwd=2)
+lines(posRichnessMeans~timeNeg, col="black", lwd=2)
 
-warmPalette<- colorRampPalette(c("red", "orange"))(43)
-plot(richnessMeans ~ timeKYR, 
-     xlim=c(21,0), ylim=c(0, max(richness, na.rm=T)), 
+coolPalette<- colorRampPalette(c("green", "blue"))(43)
+plot(richnessMeans ~ timeNeg, 
+     xlim=c(-21000,0), ylim=c(0, max(richness, na.rm=T)), 
      type="n", 
      xlab="Time slice (yr BP)", ylab="Mean Genus Richness")
 for (k in 1:length(sigNeg)){
-  lines(richness[,sigNeg[k]]~timeKYR, col=warmPalette[max(which(!is.na(richness[,sigNeg[k]])))-1])
+  lines(richness[,sigNeg[k]]~ timeNeg, col=coolPalette[max(which(!is.na(richness[,sigNeg[k]])))-1])
 }
-lines(negRichnessMeans~timeKYR, col="black", lwd=2)
+lines(negRichnessMeans~timeNeg, col="black", lwd=2)
 
 dev.off()
 
@@ -240,35 +241,37 @@ dev.off()
 pdf(file="figures/PropRichnessThruTime-all-withLines.pdf", height=4, width=6)
 par(mfrow=c(1,1))
 plot(propRichMeans ~ timeStep, 
-     xlim=c(21000,0), ylim=c(min(propRichChanges, na.rm=T), max(propRichChanges, na.rm=T)), 
+     xlim=c(-21000,0), ylim=c(min(propRichChanges, na.rm=T), max(propRichChanges, na.rm=T)), 
      type="n", 
      xlab="Time slice (yr BP)", ylab="Mean Proportional Richness Change")
 for (i in 1:ncol(propRichChanges)){
-  lines(propRichChanges[,i]~timeStep, col=rainbow(nrow(propRichChanges))[i]) 
+  lines(propRichChanges[,i]~timeStep, col=rainbow(ncol(propRichChanges))[i]) 
 }
 lines(propRichMeans~timeStep, col="black", lwd=2)
 dev.off()
 
+
 # Plot only those sites with >25% change
 
-pdf(file="figures/PropRichnessThruTime-pos and neg.pdf", height=4, width=6)
+pdf(file="figures/PropRichnessThruTime-pos and neg.pdf", height=6, width=4)
 par(mfrow=c(2,1))
 plot(noPosSites~timeStep,
-     xlim=c(21000,0), ylim=c(0, max(noOverallSites)), 
+     xlim=c(-21000,0), ylim=c(0, max(noOverallSites)), 
      pch=16, col="red", 
      xlab="Time step starting (yr BP)", ylab="Number of sites with >25% change")
 points(noNegSites~timeStep,
-       xlim=c(21000,0), ylim=c(0, max(noPosSites, noNegSites)), 
+       xlim=c(-21000,0), ylim=c(0, max(noPosSites, noNegSites)), 
        pch=16, col="blue")
 points(noOverallSites~timeStep, pch=16, col="gray")
 
 plot(propPosSites~timeStep,
-     xlim=c(21000,0), ylim=c(0, max(propPosSites, propNegSites)), 
+     xlim=c(-21000,0), ylim=c(0, max(propPosSites, propNegSites)), 
      type="l", col="red", 
      xlab="Time step starting (yr BP)", ylab="Proportion of sites with >25% change")
 points(propNegSites~timeStep,
-       xlim=c(21000,0), ylim=c(0, max(propPosSites, propNegSites)), 
+       xlim=c(-21000,0), ylim=c(0, max(propPosSites, propNegSites)), 
        type="l", col="blue")
+dev.off()
 
 # Is there a relationship between times with lots of positive and negative change?
 cor.test(propNegSites, propPosSites)
@@ -278,15 +281,16 @@ abline(lm(propNegSites~propPosSites))
 # plot the density of different rates of change with time periods
 # note: density plot isn't working, or at least, density through time is 0.
 
-proportionDF<- matrix(ncol=2, nrow=NULL)
-for (i in 1:ncol(propRichChanges)){
-  temp<- as.data.frame(cbind(as.numeric(rownames(propRichChanges)), propRichChanges[,i]))
-  proportionDF <- rbind(proportionDF, temp)
-}
-colnames(proportionDF)<- c("TimeStep", "propChange")   
-proportionDF<- proportionDF[-which(is.na(proportionDF$propChange)), ]  
-plot(propChange~TimeStep, data=proportionDF, pch=16)
-
+pdf(file="figures/PropRichnessChangeThruTime-pos and neg.pdf", height=4, width=6)
+  proportionDF<- matrix(ncol=2, nrow=0)
+  for (i in 1:ncol(propRichChanges)){
+    temp<- as.data.frame(cbind(as.numeric(rownames(propRichChanges)), propRichChanges[,i]))
+    proportionDF <- rbind(proportionDF, temp)
+  }
+  colnames(proportionDF)<- c("TimeStep", "propChange")   
+  proportionDF<- proportionDF[-which(is.na(proportionDF$propChange)), ]  
+  plot(propChange~TimeStep, data=proportionDF, pch=16, cex=0.75, col=rgb(0,0,0,0.25))
+dev.off()
 
 
 
