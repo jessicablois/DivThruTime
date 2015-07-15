@@ -2,10 +2,65 @@
 load("workspaces/richness.RData")
 source("code/Part0-GlobalParam.R")
 
-# Did more compositional change occurred between periods with more rapid climate change?
 library(raster)
 
+# Do sites have higher richness in warm vs cool, dry vs mesic times? ####
+climateDir<- "/Volumes/bloisgroup/bloislab/Data/Climate/Paleo/CCSM3_500/With_PaleoShorelines/"
+tVar<- "tmax_year_ave"
+pVar<- "prcp_year_ave"
+cVar<- "aet_year_ave"
+
+tStack<- stack(paste(climateDir, allTimes[1], "BP/", tVar, ".tif", sep=""))
+pStack<- stack(paste(climateDir, allTimes[1], "BP/", pVar, ".tif", sep=""))
+cStack<- stack(paste(climateDir, allTimes[1], "BP/", cVar, ".tif", sep=""))
+
+for (i in 2:length(allTimes)){
+  tStack <- addLayer(tStack, paste(climateDir, allTimes[i], "BP/", tVar, ".tif", sep=""))
+  pStack <- addLayer(pStack, paste(climateDir, allTimes[i], "BP/", pVar, ".tif", sep=""))
+  cStack <- addLayer(cStack, paste(climateDir, allTimes[i], "BP/", cVar, ".tif", sep=""))
+  }
+
+names(tStack)<- paste("time", allTimes, sep="_")
+names(pStack)<- paste("time", allTimes, sep="_")
+names(cStack)<- paste("time", allTimes, sep="_")
+
+siteLatLongs <- latlongs[match(colnames(richness), latlongs$Handle), c("Longitude", "Latitude")]
+siteT <- extract(tStack, siteLatLongs)
+siteP <- extract(pStack, siteLatLongs)
+siteC <- extract(cStack, siteLatLongs)
+
+rownames(siteT) <- rownames(siteP) <- rownames(siteC) <- colnames(richness)
+colnames(siteT) <- colnames(siteP) <- colnames(siteC) <- allTimes
+
+siteT <- t(siteT)
+siteP <- t(siteP)
+siteC <- t(siteC)
+
+#### Build models ####
+length(biomesinSamp)
+siteBiomes<- as.data.frame(biomesinSamp)
+rownames(siteBiomes) <- colnames(richness)
+
+for (i in 1:length(allTimes)){
+  dataframe <-  cbind(richness[i,], siteT[i, ], siteP[i, ], siteC[i, ], siteBiomes[ ,1]) 
+  dataframe <- as.data.frame(dataframe)
+  colnames(dataframe) <- c("richness", "siteT", "siteP", "siteC", "siteBiomes")
+  dataframe <- na.omit(dataframe)
+  
+  glminit<- glm(richness ~ siteT + siteP + siteBiomes, data=dataframe)
+  glmfinal<- stepAIC(glminit)
+  assign(paste("glmfinal_", allTimes[i], sep=""), glmfinal)
+}
+
+for (i in 1:length(allTimes)){
+  cat("Time = ", allTimes[i])
+  print(summary(get(paste("glmfinal_", allTimes[i], sep=""))))
+}
+
+
 #### site level richness and climate change matrix #### 
+
+# Did more compositional change occurred between periods with more rapid climate change? ####
 
 #read in climate velocity stacks.
 # the temporalGrad layer has the magnitudes of climate change
