@@ -18,23 +18,20 @@ points(neutralCentroid, col="darkgray", pch=16, cex=1.5)
 spatialNegatives<- latlongs[match(colnames(richness)[sigNeg], latlongs$Handle),]
 coordinates(spatialNegatives)<- ~Longitude+Latitude
 negativeCentroid<- gCentroid(spatialNegatives)
-plot(spatialNegatives, col="red", add=T)
-points(negativeCentroid, col="darkred", pch=16, cex=1.5)
+plot(spatialNegatives, col="blue", add=T)
+points(negativeCentroid, col="darkblue", pch=16, cex=1.5)
 
 #these are sites with increases in diversity through time
 spatialPositives<- latlongs[match(colnames(richness)[sigPos], latlongs$Handle),]
 coordinates(spatialPositives)<- ~Longitude+Latitude
 positiveCentroid<- gCentroid(spatialPositives)
-plot(spatialPositives, col="blue", add=T)
-points(positiveCentroid, col="darkblue", pch=16, cex=1.5)
+plot(spatialPositives, col="red", add=T)
+points(positiveCentroid, col="darkred", pch=16, cex=1.5)
 
 
-warmPalette<- colorRampPalette(c("red", "orange"))(43)
-negCols<- apply(richness[,sigNeg], 2, function(x) max(which(!is.na(x))))-1
-#reds= time series starts younger, orange=time series starts older
-
-coolPalette<- colorRampPalette(c("green", "blue"))(43)
 posCols<- apply(richness[,sigPos], 2, function(x) max(which(!is.na(x))))-1
+#reds= time series starts younger, orange=time series starts older
+negCols<- apply(richness[,sigNeg], 2, function(x) max(which(!is.na(x))))-1
 #greens= time series starts younger, blues=time series starts older
 
 
@@ -46,78 +43,63 @@ plot(wrld_simpl[grep("Canada", wrld_simpl@data$NAME),], axes=FALSE, col='light y
 plot(wrld_simpl[grep("Mexico", wrld_simpl@data$NAME),], axes=FALSE, col='light yellow', add=T)
 
 plot(spatialNeutrals, pch=3, cex=0.75, col="lightgray", add=T)
-plot(spatialNegatives, pch=15, col=warmPalette[negCols], add=T)
-plot(spatialPositives, pch=17, col=coolPalette[posCols], add=T)
+plot(spatialNegatives, pch=15, col=coolPalette[negCols], add=T)
+plot(spatialPositives, pch=17, col=warmPalette[posCols], add=T)
 
-legend("bottom", pch=c(rep(15, 8), 3, rep(17, 8)), col=c(warmPalette[seq(43,1, -6)], "gray", (coolPalette[seq(1,43, 6)])), 
-       legend=timeKYR[c(seq(43,1, -6)], 0, seq(1,43, 6))], cex=0.75, horiz=T)
-
-
+legend("bottom", pch=c(rep(15, 8), 3, rep(17, 8)), 
+       col=c(coolPalette[seq(43,1, -6)], "gray", (warmPalette[seq(1,43, 6)])), 
+       legend=timeKYR[c(seq(43,1, -6), 0, seq(1,43, 6))], cex=0.5, horiz=T)
 dev.off()
 
 
 pdf(file="figures/Map-RichnessThruTime-All.pdf", height=9, width=10)
 par(mfrow=c(2,2), mar=c(4,4,4,4)+0.1)
-
-plot(richnessMeans ~ allTimes, 
-     xlim=c(21000,0), ylim=c(0, max(richness, na.rm=T)), 
+plot(richnessMeans ~ timeNeg, 
+     xlim=c(-21000,0), ylim=c(0, max(richness, na.rm=T)), 
      type="n", 
-     xlab="Time slice (yr BP)", ylab="Mean Genus Richness")
-for (i in 1:nrow(richness)){
-  lines(richness[i,]~allTimes, col="gray") 
+     xlab="Time slice (yr BP)", ylab="Mean Genus Richness",
+     main="All sites")
+for (i in 1:ncol(richness)){
+  lines(richness[,i]~timeNeg, col="gray") 
 }
-lines(richnessMeans~allTimes, col="black", lwd=2)
+lines(richnessMeans~timeNeg, col="black", lwd=2)
 
-plot(richnessMeans ~ allTimes, 
-     xlim=c(21000,0), ylim=c(0, max(richness, na.rm=T)), 
+plot(richnessMeans ~ timeNeg, 
+     xlim=c(-21000,0), ylim=c(0, max(richness, na.rm=T)), 
      type="n", 
-     xlab="Time slice (yr BP)", ylab="Mean Genus Richness")
+     xlab="Time slice (yr BP)", ylab="Mean Genus Richness",
+     main="Neutral sites")
 for (k in 1:length(nonSig)){
-  lines(richness[nonSig[k],]~allTimes, col="gray")
+  lines(richness[,nonSig[k]]~timeNeg, col="gray")
 }
-lines(nonSigRichnessMeans~allTimes, col="black", lwd=2)
+lines(nonSigRichnessMeans~timeNeg, col="black", lwd=2)
 
-coolPalette<- colorRampPalette(c("green", "blue"))(21)
-plot(richnessMeans ~ allTimes, 
-     xlim=c(21000,0), ylim=c(0, max(richness, na.rm=T)), 
+plot(richnessMeans ~ timeNeg, 
+     xlim=c(-21000,0), ylim=c(0, max(richness, na.rm=T)), 
      type="n", 
-     xlab="Time slice (yr BP)", ylab="Mean Genus Richness")
+     xlab="Time slice (yr BP)", ylab="Mean Genus Richness",
+     main="Increasing sites")
 for (k in 1:length(sigPos)){
-  lines(richness[sigPos[k],]~allTimes, col=coolPalette[max(which(!is.na(richness[sigPos[k],])))-1])
+  lines(richness[,sigPos[k]]~timeNeg, col=warmPalette[max(which(!is.na(richness[,sigPos[k]])))-1])
 }
-lines(posRichnessMeans~allTimes, col="black", lwd=2)
+lines(posRichnessMeans~timeNeg, col="black", lwd=2)
 
-warmPalette<- colorRampPalette(c("red", "orange"))(21)
-plot(richnessMeans ~ allTimes, 
-     xlim=c(21000,0), ylim=c(0, max(richness, na.rm=T)), 
+plot(richnessMeans ~ timeNeg, 
+     xlim=c(-21000,0), ylim=c(0, max(richness, na.rm=T)), 
      type="n", 
-     xlab="Time slice (yr BP)", ylab="Mean Genus Richness")
+     xlab="Time slice (yr BP)", ylab="Mean Genus Richness",
+     main="Decreasing sites")
 for (k in 1:length(sigNeg)){
-  lines(richness[sigNeg[k],]~allTimes, col=warmPalette[max(which(!is.na(richness[sigNeg[k],])))-1])
+  lines(richness[,sigNeg[k]]~timeNeg, col=coolPalette[max(which(!is.na(richness[,sigNeg[k]])))-1])
 }
-lines(negRichnessMeans~allTimes, col="black", lwd=2)
-
-
+lines(negRichnessMeans~timeNeg, col="black", lwd=2)
 dev.off()
-
-
-
-
-#### plot spatial patterns of richness change ####
-
-par(mfrow=c(5,5))
-for (j in 1:nrow(siteRichChanges)){
-  specificLocs<- siteLocs[match(colnames(siteRichChanges), sites)]
-  plot(siteRichChanges[j,]~specificLocs@coords[,2], pch=16) #plot richness change as a function of latitude
-  summary(lm(siteRichChanges[j,]~specificLocs@coords[,2]))  
-}
 
 
 #### Regional analyses ####
 # superimpose present-day biome map to delimit regions, then examine richness changes within them
 # determine whether same set of species are involved in majority of colonizations or extirpations
 # Need to be in Albers
-library(maptools)
 
 #read in biome layer
 biomes<- readShapePoly("~/Dropbox/Research-Wisconsin/GIS Data/TerrestrialEcoregions/NorthAmerica_ecoregions.shp", proj4string=originalCRS) 
@@ -130,8 +112,13 @@ biomesSp@data[,6]<- as.factor(biomesSp@data[,6])
 biome.list.full<- levels(biomesSp$BIOME)
 biomeCols<- terrain.colors(length(biome.list.full))
 
-plot(biomesSp)
-points(siteLocs, col="red")
+#plot biomes with correct colors
+plot(biomesSp, lwd=0.05)
+for (i in 1:length(biome.list.full)){
+  plot(biomesSp[which(biomesSp$BIOME==biome.list.full[i]),], add=T, col=biomeCols[i], lwd=0.05)
+}
+legend("topleft", biome.list.full, pch=19, col=biomeCols)
+points(siteLocs, col="red", pch=16, cex=0.5)
 
 biomeAtLocs<- over(siteLocs, biomesSp)
 biomesinSamp<- as.numeric(as.character(biomeAtLocs$BIOME))
@@ -177,4 +164,16 @@ legend("bottomleft", bty="n", paste("biome=",biome.list.sites, " (", biomeSampSi
 dev.off()
 
 
-ncol(richness[,which(biomesinSamp==biome.list.sites[i])])
+
+
+#### plot spatial patterns of richness change ####
+# this just plots richness as a function of latitude or longitude- not useful
+
+# par(mfrow=c(5,5))
+# for (j in 1:nrow(siteRichChanges)){
+#   specificLocs<- siteLocs[match(colnames(siteRichChanges), sites)]
+#   plot(siteRichChanges[j,]~specificLocs@coords[,2], pch=16) #plot richness change as a function of latitude
+#   summary(lm(siteRichChanges[j,]~specificLocs@coords[,2]))  
+# }
+
+
