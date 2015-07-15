@@ -164,8 +164,10 @@ legend("bottomleft", bty="n", paste("biome=",biome.list.sites, " (", biomeSampSi
 dev.off()
 
 
-save(file="workspaces/spatial.RData", "spatialNeutrals")
-save(list=c("richness", "richnessMeans", "sampSize", "sigPos", "sigNeg", "nonSig", "siteRichChanges", "propRichChanges", "propRichMeans"), file="workspaces/richness.RData")
+save(list=c("spatialNeutrals", "spatialNegatives", "spatialPositives", 
+            "biomesinSamp", "biome.list.sites", "biomeMeanRichness", "biomeSampSize"), 
+     file="workspaces/spatial.RData")
+
 
 #### plot spatial patterns of richness change ####
 # this just plots richness as a function of latitude or longitude- not useful
