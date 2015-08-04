@@ -139,7 +139,7 @@ plot(richnessMeans ~ timeNeg,
      type="n", 
      xlab="Time slice (yr BP)", ylab="Mean Genus Richness")
 for (i in 1:ncol(richness)){
-  lines(richness[,i]~timeNeg, col=rainbow(nrow(richness))[i]) 
+  lines(richness[,i]~timeNeg, col="gray") 
 }
 lines(richnessMeans~timeNeg, col="black", lwd=2)
 dev.off()
@@ -201,7 +201,7 @@ dev.off()
 
 # Plot richness trajectory at each site- different plots for sig pos vs sig neg
 
-pdf(file="figures/RichnessThruTime-threePanels-withPosNegLines.pdf", height=4, width=8)
+pdf(file="figures/RichnessThruTime-threePanels-withPosNegLines.pdf", height=4, width=10)
 par(mfrow=c(1,3))
 plot(richnessMeans ~ timeNeg, 
      xlim=c(-21000,0), ylim=c(0, max(richness, na.rm=T)), 
@@ -211,6 +211,7 @@ for (k in 1:length(nonSig)){
   lines(richness[,nonSig[k]]~timeNeg, col="gray")
 }
 lines(nonSigRichnessMeans~timeNeg, col="black", lwd=2)
+legend("topleft", legend="Non-significant sites", bty="n")
 
 warmPalette<- colorRampPalette(c("red", "orange"))(43)
 plot(richnessMeans ~ timeNeg, 
@@ -221,6 +222,7 @@ for (k in 1:length(sigPos)){
   lines(richness[,sigPos[k]]~ timeNeg, col=warmPalette[max(which(!is.na(richness[,sigPos[k]])))-1]) #this sets the color according to the time the time series begins
 }
 lines(posRichnessMeans~timeNeg, col="black", lwd=2)
+legend("topleft", legend="Positive sites", bty="n")
 
 coolPalette<- colorRampPalette(c("green", "blue"))(43)
 plot(richnessMeans ~ timeNeg, 
@@ -231,6 +233,7 @@ for (k in 1:length(sigNeg)){
   lines(richness[,sigNeg[k]]~ timeNeg, col=coolPalette[max(which(!is.na(richness[,sigNeg[k]])))-1])
 }
 lines(negRichnessMeans~timeNeg, col="black", lwd=2)
+legend("topleft", legend="Negative sites", bty="n")
 
 dev.off()
 
@@ -274,9 +277,12 @@ points(propNegSites~timeStep,
 dev.off()
 
 # Is there a relationship between times with lots of positive and negative change?
-cor.test(propNegSites, propPosSites)
-plot(propNegSites~propPosSites, pch=16)
-abline(lm(propNegSites~propPosSites))
+c<- cor.test(propNegSites, propPosSites)
+pdf(file="figures/Correlation-propNeg-propPos.pdf", height=4, width=6)
+  plot(propNegSites~propPosSites, pch=16)
+  abline(lm(propNegSites~propPosSites))
+  legend("topright", legend=paste("t=", round(c$statistic, 2), "; df=", c$parameter, "; p=", round(c$p.value, 2), sep=""), bty="n")
+dev.off()
 
 # plot the density of different rates of change with time periods
 # note: density plot isn't working, or at least, density through time is 0.

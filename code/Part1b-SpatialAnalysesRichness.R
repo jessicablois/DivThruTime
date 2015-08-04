@@ -29,12 +29,12 @@ plot(spatialPositives, col="blue", add=T)
 points(positiveCentroid, col="darkblue", pch=16, cex=1.5)
 
 
-warmPalette<- colorRampPalette(c("red", "orange"))(43)
-negCols<- apply(richness[,sigNeg], 2, function(x) max(which(!is.na(x))))-1
+warmPalette<- colorRampPalette(c("red", "orange"))(length(timeNeg))
+negCols<- apply(richness[,sigNeg], 2, function(x) max(which(!is.na(x))))
 #reds= time series starts younger, orange=time series starts older
 
-coolPalette<- colorRampPalette(c("green", "blue"))(43)
-posCols<- apply(richness[,sigPos], 2, function(x) max(which(!is.na(x))))-1
+coolPalette<- colorRampPalette(c("green", "blue"))(length(timeNeg))
+posCols<- apply(richness[,sigPos], 2, function(x) max(which(!is.na(x))))
 #greens= time series starts younger, blues=time series starts older
 
 
@@ -50,57 +50,9 @@ plot(spatialNegatives, pch=15, col=warmPalette[negCols], add=T)
 plot(spatialPositives, pch=17, col=coolPalette[posCols], add=T)
 
 legend("bottom", pch=c(rep(15, 8), 3, rep(17, 8)), col=c(warmPalette[seq(43,1, -6)], "gray", (coolPalette[seq(1,43, 6)])), 
-       legend=timeKYR[c(seq(43,1, -6)], 0, seq(1,43, 6))], cex=0.75, horiz=T)
-
-
-dev.off()
-
-
-pdf(file="figures/Map-RichnessThruTime-All.pdf", height=9, width=10)
-par(mfrow=c(2,2), mar=c(4,4,4,4)+0.1)
-
-plot(richnessMeans ~ allTimes, 
-     xlim=c(21000,0), ylim=c(0, max(richness, na.rm=T)), 
-     type="n", 
-     xlab="Time slice (yr BP)", ylab="Mean Genus Richness")
-for (i in 1:nrow(richness)){
-  lines(richness[i,]~allTimes, col="gray") 
-}
-lines(richnessMeans~allTimes, col="black", lwd=2)
-
-plot(richnessMeans ~ allTimes, 
-     xlim=c(21000,0), ylim=c(0, max(richness, na.rm=T)), 
-     type="n", 
-     xlab="Time slice (yr BP)", ylab="Mean Genus Richness")
-for (k in 1:length(nonSig)){
-  lines(richness[nonSig[k],]~allTimes, col="gray")
-}
-lines(nonSigRichnessMeans~allTimes, col="black", lwd=2)
-
-coolPalette<- colorRampPalette(c("green", "blue"))(21)
-plot(richnessMeans ~ allTimes, 
-     xlim=c(21000,0), ylim=c(0, max(richness, na.rm=T)), 
-     type="n", 
-     xlab="Time slice (yr BP)", ylab="Mean Genus Richness")
-for (k in 1:length(sigPos)){
-  lines(richness[sigPos[k],]~allTimes, col=coolPalette[max(which(!is.na(richness[sigPos[k],])))-1])
-}
-lines(posRichnessMeans~allTimes, col="black", lwd=2)
-
-warmPalette<- colorRampPalette(c("red", "orange"))(21)
-plot(richnessMeans ~ allTimes, 
-     xlim=c(21000,0), ylim=c(0, max(richness, na.rm=T)), 
-     type="n", 
-     xlab="Time slice (yr BP)", ylab="Mean Genus Richness")
-for (k in 1:length(sigNeg)){
-  lines(richness[sigNeg[k],]~allTimes, col=warmPalette[max(which(!is.na(richness[sigNeg[k],])))-1])
-}
-lines(negRichnessMeans~allTimes, col="black", lwd=2)
-
+       legend=timeNeg[c(seq(43,1, -6), 0, seq(1,43, 6))], cex=0.75, horiz=T)
 
 dev.off()
-
-
 
 
 #### plot spatial patterns of richness change ####
@@ -129,9 +81,15 @@ biomesSp<- spTransform(biomes, albersCRS)
 biomesSp@data[,6]<- as.factor(biomesSp@data[,6])
 biome.list.full<- levels(biomesSp$BIOME)
 biomeCols<- terrain.colors(length(biome.list.full))
+biomeCols[14]<- "gray"  #swap colors to make 4,5,6,8,9 more distinguishable, 98=gray
+biomeCols[c(1,5)]<- biomeCols[c(5,1)]  #swap colors to make 4,5,6,8,9 more distinguishable, 98=gray
+biomeCols[c(12,4)]<- biomeCols[c(4,12)]  #swap colors to make 4,5,6,8,9 more distinguishable, 98=gray
 
-plot(biomesSp)
-points(siteLocs, col="red")
+jpeg(file="figures/PresentDayBiomesAtPoints.jpg", height=960, width=960, units="px")
+  par(mfrow=c(1,1))
+  plot(biomesSp, col=biomeCols[match(biomesSp@data$BIOME, biome.list.full)])
+  points(siteLocs, col="red", pch=16, cex=0.75)
+dev.off()
 
 biomeAtLocs<- over(siteLocs, biomesSp)
 biomesinSamp<- as.numeric(as.character(biomeAtLocs$BIOME))
@@ -155,26 +113,19 @@ colnames(biomeMeanRichness) <- biome.list.sites
 rownames(biomeMeanRichness) <- rownames(richness)
 
 pdf(file="figures/RichnessByBiome.pdf", height=4, width=6)
-
-plotCols<- rainbow(length(biome.list.sites)-1)
-plotCols<- c(plotCols, "gray")
-
-biomeSampSize <- vector(length=length(biome.list.sites))
-for (i in 1:length(biome.list.sites)-1){
-  biomeSampSize[i] <- ncol(richness[,which(biomesinSamp==biome.list.sites[i])])
-}
-biomeSampSize[7]<- 1
-
-par(mar=c(4,4,4,4)+0.1)
-plot(biomeMeanRichness[,1]~timeNeg, type="n", xlim=c(-21000,0), ylim=c(0, max(biomeMeanRichness, na.rm=T)),
-     xlab="Time slice (yr BP)", ylab="Mean Genus Richness")
-for (i in 1:length(biome.list.sites)){
-  lines(biomeMeanRichness[,i]~timeNeg, pch=16, col=plotCols[i])
-}
-lines(richnessMeans ~ timeNeg, lwd=1.5, col="black")
-legend("bottomleft", bty="n", paste("biome=",biome.list.sites, " (", biomeSampSize, " sites)", sep=""), col=plotCols, lwd=1, cex=0.75)
-
+  plotCols<- biomeCols[match(biome.list.sites, biome.list.full)]
+  biomeSampSize <- vector(length=length(biome.list.sites))
+  for (i in 1:length(biome.list.sites)-1){
+    biomeSampSize[i] <- ncol(richness[,which(biomesinSamp==biome.list.sites[i])])
+  }
+  biomeSampSize[7]<- 1
+  
+  par(mar=c(4,4,4,4)+0.1)
+  plot(biomeMeanRichness[,1]~timeNeg, type="n", xlim=c(-21000,0), ylim=c(0, max(biomeMeanRichness, na.rm=T)),
+       xlab="Time slice (yr BP)", ylab="Mean Genus Richness")
+  for (i in 1:length(biome.list.sites)){
+    lines(biomeMeanRichness[,i]~timeNeg, pch=16, col=plotCols[i])
+  }
+  lines(richnessMeans ~ timeNeg, lwd=1.5, col="black")
+  legend("bottomleft", bty="n", paste("biome=",biome.list.sites, " (", biomeSampSize, " sites)", sep=""), col=plotCols, lwd=1, cex=0.75)
 dev.off()
-
-
-ncol(richness[,which(biomesinSamp==biome.list.sites[i])])
