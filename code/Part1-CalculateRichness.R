@@ -298,6 +298,36 @@ pdf(file="figures/PropRichnessChangeThruTime-pos and neg.pdf", height=4, width=6
   plot(propChange~TimeStep, data=proportionDF, pch=16, cex=0.75, col=rgb(0,0,0,0.25))
 dev.off()
 
+#### When you control for length of record, is there a pattern to richness change? ####
+startTimes <- apply(richness, 2, function(x) max(as.numeric(names(which(!is.na(x))))))
 
+holoSites <- which(startTimes <= 11000)
+pleistSites <- which(startTimes > 11000)
 
+hist(linearSlopes[pleistSites])
+hist(linearSlopes[holoSites])
 
+hist(linearSlopes[holoSites], xlim=c(-.003, .003), ylim=c(0, 150), col=rgb(0,0,1, alpha=0.75), xlab="", ylab="", main="")
+par(new=T)
+hist(linearSlopes[pleistSites], xlim=c(-.003, .003), ylim=c(0, 150), col=rgb(1,1,0, alpha=0.5), axes=F, xlab="", ylab="", main="")
+
+sigPosPleist <- intersect(sigPos, pleistSites)
+sigNegPleist <- intersect(sigNeg, pleistSites)
+
+sigPosHolo <- intersect(sigPos, holoSites)
+sigNegHolo <- intersect(sigNeg, holoSites)
+
+length(sigPosPleist)/length(pleistSites)
+length(sigNegPleist)/length(pleistSites)
+length(sigPosHolo)/length(holoSites)
+length(sigNegHolo)/length(holoSites)
+
+## Results ####
+# > length(sigPosPleist)/length(pleistSites)
+# [1] 0.4327485
+# > length(sigNegPleist)/length(pleistSites)
+# [1] 0.1169591
+# > length(sigPosHolo)/length(holoSites)
+# [1] 0.2169118
+# > length(sigNegHolo)/length(holoSites)
+# [1] 0.1323529

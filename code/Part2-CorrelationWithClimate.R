@@ -3,6 +3,7 @@ load("workspaces/richness.RData")
 source("code/Part0-GlobalParam.R")
 
 library(raster)
+library(MASS)
 
 # Do sites have higher richness in warm vs cool, dry vs mesic times? ####
 climateDir<- "/Volumes/bloisgroup/bloislab/Data/Climate/Paleo/CCSM3_500/With_PaleoShorelines/"
@@ -60,7 +61,7 @@ for (i in 1:length(allTimes)){
 
 #### site level richness and climate change matrix #### 
 
-# Did more compositional change occurred between periods with more rapid climate change? ####
+# Did more compositional change occurr between periods with more rapid climate change? ####
 
 #read in climate velocity stacks.
 # the temporalGrad layer has the magnitudes of climate change
@@ -77,36 +78,36 @@ for (k in 1:nrow(siteRichChanges)){
   climVeloc<- stack(paste(climateDir, "/Climate Velocity/", var, "-", t1, "-", t2, ".tif", sep=""))
   names(climVeloc)<- c("temporalGrad", "spatialGrad", "Velocity", "BRNG")
   
-  siteClimChanges[,k]<- extract(climVeloc$temporalGrad, siteLocs[match(rownames(siteRichChanges), sites)])
+  siteClimChanges[k,]<- extract(climVeloc$temporalGrad, siteLocs[match(colnames(siteRichChanges), sites)])
   
 }
 
 siteClimChanges[which(is.na(siteRichChanges))]<- NaN
-siteClimChanges<- siteClimChanges*1000 #(convert to total amount of clim change, not per year)
+siteClimChanges<- siteClimChanges*500 #(convert to total amount of clim change, not per year)
 
 #### extract means ####
-richMean<- colMeans(siteRichChanges, na.rm=T)
-climMean<- colMeans(siteClimChanges, na.rm=T)
+richMean<- rowMeans(siteRichChanges, na.rm=T)
+climMean<- rowMeans(siteClimChanges, na.rm=T)
 
 
 
 
 #### Mean plotting and models ####
 plot(richMean~climMean, pch=16, xlab="Temperature change")
-points(richMean[1:11]~climMean[1:11], col="red", pch=16)
-points(richMean[12:21]~climMean[12:21], col="blue", pch=16)
+points(richMean[1:23]~climMean[1:23], col="red", pch=16)
+points(richMean[24:42]~climMean[24:42], col="blue", pch=16)
 
 climateChangeModel<- summary(lm(richMean~climMean))  # no relationship.  
 
-#Pleistocene change [1:19]
-plot(richMean[12:21]~climMean[12:21], pch=16, xlab="Temperature change")
-summary(lm(richMean[12:21]~climMean[12:21]))
-abline(lm(richMean[12:21]~climMean[12:21]))
+#Pleistocene change [24:42]
+plot(richMean[24:42]~climMean[24:42], pch=16, xlab="Temperature change")
+summary(lm(richMean[24:42]~climMean[24:42]))
+abline(lm(richMean[24:42]~climMean[24:42]))
 
-#Holocene [20:42]
-plot(richMean[1:11]~climMean[1:11], pch=16, xlab="Temperature change")
-summary(lm(richMean[1:11]~climMean[1:11]))
-abline(lm(richMean[1:11]~climMean[1:11]))
+#Holocene [1:23]
+plot(richMean[1:23]~climMean[1:23], pch=16, xlab="Temperature change")
+summary(lm(richMean[1:23]~climMean[1:23]))
+abline(lm(richMean[1:23]~climMean[1:23]))
 
 #### Site level plotting ####
 richTemp<- as.vector(siteRichChanges)
