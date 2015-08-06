@@ -143,38 +143,61 @@ plot(richMean[24:42]~precipVelocMean[24:42], pch=16, xlab="Precipitation velocit
 summary(lm(richMean[24:42]~precipVelocMean[24:42]))
 abline(lm(richMean[24:42]~precipVelocMean[24:42]))
 
-#Holocene temp change [1:23]
+#Holocene precip change [1:23]
 plot(richMean[1:23]~precipVelocMean[1:23], pch=16, xlab="Precipitation velocity")
 summary(lm(richMean[1:23]~precipVelocMean[1:23]))
 abline(lm(richMean[1:23]~precipVelocMean[1:23]))
 
 #### Site level plotting ####
 richTemp<- as.vector(siteRichChanges)
-climTemp<- as.vector(siteTempChanges)
+tempTemp<- as.vector(siteTempChanges)
+precipTemp<- as.vector(sitePrecipChanges)
 
-plot(richTemp~climTemp, pch=16, xlab="Site temperature change", ylab="Site richness change")
-abline(lm(richTemp~climTemp))
-summary(lm(richTemp~climTemp))
+plot(richTemp~tempTemp, pch=16, cex=0.5, col="gray",
+     xlab="Site temperature velocity", ylab="Site richness change")
+abline(lm(richTemp~tempTemp), lwd=2)
+summary(lm(richTemp~tempTemp))
+
+plot(richTemp~precipTemp, pch=16, cex=0.5, col="gray",
+     xlab="Site precipitation velocity", ylab="Site richness change")
+abline(lm(richTemp~precipTemp), lwd=2)
+summary(lm(richTemp~precipTemp))
 
 #Plot site level and means together
-pdf(file="figures/Correlation-Richness-ClimChange-3Panels.pdf", height=2, width=6)
+pdf(file="figures/Correlation-Richness-ClimChange-2rows-3Panels.pdf", height=4, width=6)
 
-  par(mfrow=c(1,3), mar=c(4,4,0,0)+0.1)
+  par(mfrow=c(2,3), mar=c(4,4,0,0)+0.1)
   
-  plot(richTemp~climTemp, pch=16, xlab="Site temperature change", ylab="Site richness change")
+  #temp
+  plot(richTemp~tempTemp, pch=16, xlab="Site temperature change", ylab="Site richness change")
   #abline(lm(richTemp~climTemp))
-  summary(lm(richTemp~climTemp))
+  summary(lm(richTemp~tempTemp))
   
-  plot(richMean[12:21]~climMean[12:21], pch=16, xlim=c(-1,8), ylim=c(-1, 1),
+  plot(richMean[24:42]~tempVelocMean[24:42], pch=16, xlim=c(-0.05,0.05), ylim=c(-1, 1),
        xlab="Mean temperature change", ylab="Mean richness change")
-  abline(lm(richMean[12:21]~climMean[12:21]))
-  pModel<- lm(richMean[12:21]~climMean[12:21])
+  abline(lm(richMean[24:42]~tempVelocMean[24:42]))
+  pModel<- lm(richMean[24:42]~tempVelocMean[24:42])
   
-  plot(richMean[1:11]~climMean[1:11], pch=16, xlim=c(-1,8), ylim=c(-1, 1),
+  plot(richMean[1:23]~tempVelocMean[1:23], pch=16, xlim=c(-0.05,0.05), ylim=c(-1, 1),
        xlab="Mean temperature change", ylab="Mean richness change")
-  abline(lm(richMean[1:11]~climMean[1:11]))
-  hModel<- lm(richMean[1:11]~climMean[1:11])
+  abline(lm(richMean[1:23]~tempVelocMean[1:23]))
+  hModel<- lm(richMean[1:23]~tempVelocMean[1:23])
 
+  #precip
+  plot(richTemp~precipTemp, pch=16, xlab="Site precip change", ylab="Site richness change")
+  #abline(lm(richTemp~precipTemp))
+  summary(lm(richTemp~precipTemp))
+  
+  plot(richMean[24:42]~precipVelocMean[24:42], pch=16, xlim=c(-0.3,0.3), ylim=c(-1, 1),
+       xlab="Mean precip change", ylab="Mean richness change")
+  abline(lm(richMean[24:42]~precipVelocMean[24:42]))
+  pModel<- lm(richMean[24:42]~precipVelocMean[24:42])
+  
+  plot(richMean[1:23]~precipVelocMean[1:23], pch=16, xlim=c(-0.3,0.3), ylim=c(-1, 1),
+       xlab="Mean precip change", ylab="Mean richness change")
+  abline(lm(richMean[1:23]~precipVelocMean[1:23]))
+  hModel<- lm(richMean[1:23]~precipVelocMean[1:23])
+  
 dev.off()
 
 
