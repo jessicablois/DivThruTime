@@ -38,6 +38,7 @@ siteP <- t(siteP)
 siteC <- t(siteC)
 
 #### Build models ####
+#### Jessica note: this doesn't run because biomesinSamp not saved in richness workspace 
 length(biomesinSamp)
 siteBiomes<- as.data.frame(biomesinSamp)
 rownames(siteBiomes) <- colnames(richness)
@@ -65,53 +66,91 @@ for (i in 1:length(allTimes)){
 
 #read in climate velocity stacks.
 # the temporalGrad layer has the magnitudes of climate change
+
 climateDir<- "/Volumes/bloisgroup/bloislab/Data/Climate/Paleo/CCSM3_500/With_PaleoShorelines"
+
+# temperature
 var<- "tmax_year_ave"
 
-siteClimChanges<- matrix(nrow=nrow(siteRichChanges), ncol=ncol(siteRichChanges))
+siteTempChanges<- matrix(nrow=nrow(siteRichChanges), ncol=ncol(siteRichChanges))
 
 for (k in 1:nrow(siteRichChanges)){
   t1<- as.numeric(rownames(siteRichChanges)[k])
   t2<- t1-500
   
   #read in climate data and extract values from shared sites
-  climVeloc<- stack(paste(climateDir, "/Climate Velocity/", var, "-", t1, "-", t2, ".tif", sep=""))
-  names(climVeloc)<- c("temporalGrad", "spatialGrad", "Velocity", "BRNG")
+  tempVeloc<- stack(paste(climateDir, "/Climate Velocity/", var, "-", t1, "-", t2, ".tif", sep=""))
+  names(tempVeloc)<- c("temporalGrad", "spatialGrad", "Velocity", "BRNG")
   
-  siteClimChanges[k,]<- extract(climVeloc$temporalGrad, siteLocs[match(colnames(siteRichChanges), sites)])
+  siteTempChanges[k,]<- extract(tempVeloc$temporalGrad, siteLocs[match(colnames(siteRichChanges), sites)])
   
 }
 
-siteClimChanges[which(is.na(siteRichChanges))]<- NaN
-siteClimChanges<- siteClimChanges*500 #(convert to total amount of clim change, not per year)
+siteTempChanges[which(is.na(siteRichChanges))]<- NaN
+#siteTempChanges<- siteTempChanges*500 #(convert to total amount of clim change, not per year)
+
+# precip
+var<- "prcp_year_ave"
+
+sitePrecipChanges<- matrix(nrow=nrow(siteRichChanges), ncol=ncol(siteRichChanges))
+
+for (k in 1:nrow(siteRichChanges)){
+  t1<- as.numeric(rownames(siteRichChanges)[k])
+  t2<- t1-500
+  
+  #read in climate data and extract values from shared sites
+  precipVeloc<- stack(paste(climateDir, "/Climate Velocity prcp/", var, "-", t1, "-", t2, ".tif", sep=""))
+  names(precipVeloc)<- c("temporalGrad", "spatialGrad", "Velocity", "BRNG")
+  
+  sitePrecipChanges[k,]<- extract(precipVeloc$temporalGrad, siteLocs[match(colnames(siteRichChanges), sites)])
+  
+}
+
+sitePrecipChanges[which(is.na(siteRichChanges))]<- NaN
+#sitePrecipChanges<- sitePrecipChanges*500 #(convert to total amount of clim change, not per year)
 
 #### extract means ####
 richMean<- rowMeans(siteRichChanges, na.rm=T)
-climMean<- rowMeans(siteClimChanges, na.rm=T)
-
+tempVelocMean<- rowMeans(siteTempChanges, na.rm=T)
+precipVelocMean<- rowMeans(sitePrecipChanges, na.rm=T)
 
 
 
 #### Mean plotting and models ####
-plot(richMean~climMean, pch=16, xlab="Temperature change")
-points(richMean[1:23]~climMean[1:23], col="red", pch=16)
-points(richMean[24:42]~climMean[24:42], col="blue", pch=16)
+par(mfrow=c(1,2))
+plot(richMean~tempVelocMean, pch=16, xlab="Temperature Velocity", ylab="Mean Richness Change")
+points(richMean[1:23]~tempVelocMean[1:23], col="red", pch=16)
+points(richMean[24:42]~tempVelocMean[24:42], col="blue", pch=16)
 
-climateChangeModel<- summary(lm(richMean~climMean))  # no relationship.  
+plot(richMean~precipVelocMean, pch=16, xlab="Precipitation Velocity", ylab="Mean Richness Change")
+points(richMean[1:23]~precipVelocMean[1:23], col="red", pch=16)
+points(richMean[24:42]~precipVelocMean[24:42], col="blue", pch=16)
 
-#Pleistocene change [24:42]
-plot(richMean[24:42]~climMean[24:42], pch=16, xlab="Temperature change")
-summary(lm(richMean[24:42]~climMean[24:42]))
-abline(lm(richMean[24:42]~climMean[24:42]))
+climateChangeModel<- summary(lm(richMean~tempVelocMean*precipVelocMean))  # no relationship.  
 
-#Holocene [1:23]
-plot(richMean[1:23]~climMean[1:23], pch=16, xlab="Temperature change")
-summary(lm(richMean[1:23]~climMean[1:23]))
-abline(lm(richMean[1:23]~climMean[1:23]))
+#Pleistocene temperature change [24:42]
+plot(richMean[24:42]~tempVelocMean[24:42], pch=16, xlab="Temperature velocity")
+summary(lm(richMean[24:42]~tempVelocMean[24:42]))
+abline(lm(richMean[24:42]~tempVelocMean[24:42]))
+
+#Holocene temp change [1:23]
+plot(richMean[1:23]~tempVelocMean[1:23], pch=16, xlab="Temperature velocity")
+summary(lm(richMean[1:23]~tempVelocMean[1:23]))
+abline(lm(richMean[1:23]~tempVelocMean[1:23]))
+
+#Pleistocene precip change [24:42]
+plot(richMean[24:42]~precipVelocMean[24:42], pch=16, xlab="Precipitation velocity")
+summary(lm(richMean[24:42]~precipVelocMean[24:42]))
+abline(lm(richMean[24:42]~precipVelocMean[24:42]))
+
+#Holocene temp change [1:23]
+plot(richMean[1:23]~precipVelocMean[1:23], pch=16, xlab="Precipitation velocity")
+summary(lm(richMean[1:23]~precipVelocMean[1:23]))
+abline(lm(richMean[1:23]~precipVelocMean[1:23]))
 
 #### Site level plotting ####
 richTemp<- as.vector(siteRichChanges)
-climTemp<- as.vector(siteClimChanges)
+climTemp<- as.vector(siteTempChanges)
 
 plot(richTemp~climTemp, pch=16, xlab="Site temperature change", ylab="Site richness change")
 abline(lm(richTemp~climTemp))
@@ -142,13 +181,13 @@ dev.off()
 ## climate change at sites ##
 
 posRichChange<- siteRichChanges[sigPos,]
-posClimChange<- siteClimChanges[sigPos,]
+posClimChange<- siteTempChanges[sigPos,]
 plot(posRichChange~posClimChange, pch=16)
 summary(lm(as.vector(posRichChange)~as.vector(posClimChange)))
 
 
 negRichChange<- siteRichChanges[sigNeg,]
-negClimChange<- siteClimChanges[sigNeg,]
+negClimChange<- siteTempChanges[sigNeg,]
 plot(negRichChange~negClimChange, pch=16)
 summary(lm(as.vector(negRichChange)~as.vector(negClimChange)))
 
