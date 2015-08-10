@@ -14,13 +14,12 @@ sigVector[sigPos]<- "sigPos"
 sigVector[sigNeg]<- "sigNeg"
 sigVector[nonSig]<- "nonSig"
 
-# calculate dissimilarity
-
-siteChangesPair<- matrix(ncol=ncol(richness), nrow=nrow(richness))
-siteChangesPair<- as.data.frame(siteChangesPair)
-colnames(siteChangesPair)<- colnames(richness)
-rownames(siteChangesPair)<- rownames(richness)
-siteChangesSeq<- siteChangesPair
+# look at raw richness changes (distance)
+siteChangesPairRaw<- matrix(ncol=ncol(richness), nrow=nrow(richness))
+siteChangesPairRaw<- as.data.frame(siteChangesPairRaw)
+colnames(siteChangesPairRaw)<- colnames(richness)
+rownames(siteChangesPairRaw)<- rownames(richness)
+siteChangesSeqRaw<- siteChangesPairRaw
 
 for (i in 1:ncol(richness)){
   timeSeries <- richness[,i]
@@ -41,37 +40,37 @@ for (i in 1:ncol(richness)){
   pair<- d2[pairwisematches,]
   seq<- d2[sequentialmatches,]
   
-  siteChangesPair[match(pair$t1, rownames(siteChangesPair)),i] <- pair$distance
-  siteChangesSeq[match(seq$t1, rownames(siteChangesPair)),i] <- seq$distance
+  siteChangesPairRaw[match(pair$t1, rownames(siteChangesPairRaw)),i] <- pair$distance
+  siteChangesSeqRaw[match(seq$t1, rownames(siteChangesPairRaw)),i] <- seq$distance
 }
 
-pairMeans <- apply(siteChangesPair, 1, mean, na.rm=T)
-seqMeans <- apply(siteChangesSeq, 1, mean, na.rm=T)
+pairMeansRaw <- apply(siteChangesPair, 1, mean, na.rm=T)
+seqMeansRaw <- apply(siteChangesSeq, 1, mean, na.rm=T)
 
 # Plot the changes ####
 pdf(file="figures/RichnessChangeThruTime-all-withLines.pdf", height=6, width=10)
 par(mfrow=c(1,2))
-plot(pairMeans ~ timeNeg, 
-     xlim=c(-21000,0), ylim=c(0, max(siteChangesPair, na.rm=T)), 
+plot(pairMeansRaw ~ timeNeg, 
+     xlim=c(-21000,0), ylim=c(0, max(siteChangesPairRaw, na.rm=T)), 
      type="n", 
      xlab="Time slice (yr BP)", ylab="Euclidean Distance of Richness Change - pairwise")
-for (i in 1:ncol(siteChangesPair)){
-  lines(siteChangesPair[,i]~timeNeg, col="gray") 
+for (i in 1:ncol(siteChangesPairRaw)){
+  lines(siteChangesPairRaw[,i]~timeNeg, col="gray") 
 }
-lines(pairMeans~timeNeg, col="black", lwd=2)
+lines(pairMeansRaw~timeNeg, col="black", lwd=2)
 
-plot(seqMeans ~ timeNeg, 
-     xlim=c(-21000,0), ylim=c(0, max(siteChangesSeq, na.rm=T)), 
+plot(seqMeansRaw ~ timeNeg, 
+     xlim=c(-21000,0), ylim=c(0, max(siteChangesSeqRaw, na.rm=T)), 
      type="n", 
      xlab="Time slice (yr BP)", ylab="Euclidean Distance of Richness Change - from youngest")
-for (i in 1:ncol(siteChangesSeq)){
-  lines(siteChangesSeq[,i]~timeNeg, col="gray") 
+for (i in 1:ncol(siteChangesSeqRaw)){
+  lines(siteChangesSeqRaw[,i]~timeNeg, col="gray") 
 }
-lines(seqMeans~timeNeg, col="black", lwd=2)
+lines(seqMeansRaw~timeNeg, col="black", lwd=2)
 dev.off()
 
 
-### What about keeping track of positive vs negative changes? ####
+### What about keeping track of positive vs negative changes? eg jaccard dissim ####
 siteChangesPair<- matrix(ncol=ncol(richness), nrow=nrow(richness))
 siteChangesPair<- as.data.frame(siteChangesPair)
 colnames(siteChangesPair)<- colnames(richness)
@@ -262,6 +261,21 @@ for (k in 2:nrow(siteChangesPair)){
 # Amount of temperature change, amount of precipitation change, on average
 # Rates of temperature change, rates of precipitation change, on average
 
+#Richness distance
+par(mfrow=c(2,2))
+plot(rowMeans(siteChangesPairRaw, na.rm=T) ~ timeNeg, 
+     type="l",xlab="Time (years BP)", ylab="Mean Compositional Change")
+plot(rowMeans(siteChangesPairRaw, na.rm=T) ~ timeNeg, 
+     type="l",  xlab="Time (years BP)", ylab="Mean Compositional Change")
+
+plot(rowMeans(siteTempChangesPair, na.rm=T) ~ timeNeg, 
+     type="l", xlab="Time (years BP)", ylab="Mean Max Temperature Change")
+segments(-21000, 0, 0, 0)
+plot(rowMeans(sitePrecipChangesPair, na.rm=T) ~ timeNeg, 
+     type="l", xlab="Time (years BP)", ylab="Mean Precipitation Change")
+segments(-21000, 0, 0, 0)
+
+#Jaccard abund dissim
 par(mfrow=c(2,2))
   plot(rowMeans(siteChangesPairAbund, na.rm=T) ~ timeNeg, 
        type="l", ylim=c(0.1, 0.5), xlab="Time (years BP)", ylab="Mean Compositional Change")
@@ -283,7 +297,26 @@ par(mfrow=c(2,2))
 #   segments(-21000, 0, 0, 0)
 #   
 
-## Plot mean compositional change against climate change
+  ## Plot mean compositional change against climate change- abund ####
+  pdf(file="figures/RawRichness-climatechange.pdf", width=10, height=4)
+  par(mfrow=c(1,2))
+ 
+  plot(rowMeans(siteChangesPairRaw, na.rm=T) ~ rowMeans(siteTempChangesPair, na.rm=T),
+       pch=16, ylab="Mean Compositional Change - Euclidean", xlab="Mean Max Temperature Change")
+  abline(lm(rowMeans(siteChangesPairRaw, na.rm=T) ~ rowMeans(siteTempChangesPair, na.rm=T)))
+  summary(lm(rowMeans(siteChangesPairRaw, na.rm=T) ~ rowMeans(siteTempChangesPair, na.rm=T)))
+  legend("bottomright", legend="NS", bty="n")
+  
+  
+  plot(rowMeans(siteChangesPairRaw, na.rm=T) ~ rowMeans(sitePrecipChangesPair, na.rm=T),
+       pch=16, ylab="Mean Compositional Change - Euclidean", xlab="Mean Precipitation Change")
+  abline(lm(rowMeans(siteChangesPairRaw, na.rm=T) ~ rowMeans(sitePrecipChangesPair, na.rm=T)))
+  summary(lm(rowMeans(siteChangesPairRaw, na.rm=T) ~ rowMeans(sitePrecipChangesPair, na.rm=T)))
+  legend("bottomright", legend="NS", bty="n")
+  
+  dev.off()  
+  
+## Plot mean compositional change against climate change- abund ####
 pdf(file="figures/Jaccard-climatechange.pdf", width=10, height=6)
   par(mfrow=c(2,2))
   plot(rowMeans(siteChangesPair, na.rm=T) ~ rowMeans(siteTempChangesPair, na.rm=T),
