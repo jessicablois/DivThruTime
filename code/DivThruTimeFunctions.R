@@ -22,7 +22,9 @@ calcSiteRichness<- function(dat, minTime, maxTime, pollenThreshold, interval){
   fullRich<- as.vector(rep(NaN, length(allTimes)), mode="numeric")
   fullRich[match(siteTimes, allTimes)]<- datRichness  
   
-  return(fullRich)
+  #list(l1,mu)
+  #newList <- list("integer" = foo, "names" = bar) 
+  return(list(fullRich=fullRich, datPA=datRev))
 }
 
 

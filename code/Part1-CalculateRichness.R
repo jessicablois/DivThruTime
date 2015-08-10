@@ -203,6 +203,11 @@ dev.off()
 
 pdf(file="figures/RichnessThruTime-threePanels-withPosNegLines.pdf", height=4, width=10)
 par(mfrow=c(1,3))
+warmPalette<- colorRampPalette(c("red", "yellow"))(length(timeNeg)-1)
+warmPalette<- c("gray", rev(warmPalette))
+coolPalette<- colorRampPalette(c("green", "blue"))(length(timeNeg)-1)
+coolPalette<- c("gray", coolPalette)
+
 plot(richnessMeans ~ timeNeg, 
      xlim=c(-21000,0), ylim=c(0, max(richness, na.rm=T)), 
      type="n", 
@@ -213,7 +218,6 @@ for (k in 1:length(nonSig)){
 lines(nonSigRichnessMeans~timeNeg, col="black", lwd=2)
 legend("topleft", legend="Non-significant sites", bty="n")
 
-warmPalette<- colorRampPalette(c("red", "orange"))(43)
 plot(richnessMeans ~ timeNeg, 
      xlim=c(-21000,0), ylim=c(0, max(richness, na.rm=T)), 
      type="n", 
@@ -224,7 +228,6 @@ for (k in 1:length(sigPos)){
 lines(posRichnessMeans~timeNeg, col="black", lwd=2)
 legend("topleft", legend="Positive sites", bty="n")
 
-coolPalette<- colorRampPalette(c("green", "blue"))(43)
 plot(richnessMeans ~ timeNeg, 
      xlim=c(-21000,0), ylim=c(0, max(richness, na.rm=T)), 
      type="n", 

@@ -29,19 +29,15 @@ plot(spatialPositives, col="red", add=T)
 points(positiveCentroid, col="darkred", pch=16, cex=1.5)
 
 
-warmPalette<- colorRampPalette(c("red", "orange"))(length(timeNeg))
-negCols<- apply(richness[,sigNeg], 2, function(x) max(which(!is.na(x))))
-#reds= time series starts younger, orange=time series starts older
-
-coolPalette<- colorRampPalette(c("green", "blue"))(length(timeNeg))
-posCols<- apply(richness[,sigPos], 2, function(x) max(which(!is.na(x))))
-
-posCols<- apply(richness[,sigPos], 2, function(x) max(which(!is.na(x))))-1
-#reds= time series starts younger, orange=time series starts older
-negCols<- apply(richness[,sigNeg], 2, function(x) max(which(!is.na(x))))-1
-
+warmPalette<- colorRampPalette(c("red", "yellow"))(length(timeNeg)-1)
+warmPalette<- c("gray", rev(warmPalette))
+coolPalette<- colorRampPalette(c("green", "blue"))(length(timeNeg)-1)
+coolPalette<- c("gray", coolPalette)
+#reds= orange=time series starts younger, time series starts older 
 #greens= time series starts younger, blues=time series starts older
 
+negCols<- apply(richness[,sigNeg], 2, function(x) max(which(!is.na(x))))
+posCols<- apply(richness[,sigPos], 2, function(x) max(which(!is.na(x))))
 
 data(wrld_simpl)
 pdf(file="figures/Map-RichnessThruTime.pdf", height=9, width=10)
@@ -51,23 +47,96 @@ plot(wrld_simpl[grep("Canada", wrld_simpl@data$NAME),], axes=FALSE, col='light y
 plot(wrld_simpl[grep("Mexico", wrld_simpl@data$NAME),], axes=FALSE, col='light yellow', add=T)
 
 plot(spatialNeutrals, pch=3, cex=0.75, col="lightgray", add=T)
-plot(spatialNegatives, pch=15, col=warmPalette[negCols], add=T)
-plot(spatialPositives, pch=17, col=coolPalette[posCols], add=T)
+plot(spatialNegatives, pch=17, col=coolPalette[negCols], add=T)
+plot(spatialPositives, pch=15, col=warmPalette[posCols], add=T)
 
-legend("bottom", pch=c(rep(15, 8), 3, rep(17, 8)), col=c(warmPalette[seq(43,1, -6)], "gray", (coolPalette[seq(1,43, 6)])), 
-       legend=timeNeg[c(seq(43,1, -6), 0, seq(1,43, 6))], cex=0.75, horiz=T)
-plot(spatialNegatives, pch=15, col=coolPalette[negCols], add=T)
-plot(spatialPositives, pch=17, col=warmPalette[posCols], add=T)
+l <- legend("bottomleft", legend=rep(NA, 16), 
+       ncol=2, pch=c(rep(15, 8), rep(17, 8)), bty="n",
+       col=c(warmPalette[seq(43,1, -6)], coolPalette[seq(43,1, -6)]))
+text(l$text$x+4, l$text$y, c(abs(timeNeg[seq(43,1, -6)]), rep(NA, 8)), pos = 4, cex=0.5)
 
+dev.off()
 
-legend("bottom", pch=c(rep(15, 8), 3, rep(17, 8)), 
-       col=c(coolPalette[seq(43,1, -6)], "gray", (warmPalette[seq(1,43, 6)])), 
-       legend=timeKYR[c(seq(43,1, -6), 0, seq(1,43, 6))], cex=0.5, horiz=T)
+pdf(file="figures/Map-RichnessThruTime-3panels.pdf", height=9, width=10)
+par(mfrow=c(1,3))
+
+#plot neutrals
+plot(wrld_simpl[grep("United States", wrld_simpl@data$NAME),], xlim=c(-160, -60), ylim=c(15, 80), axes=FALSE, col='light yellow')
+plot(wrld_simpl[grep("Canada", wrld_simpl@data$NAME),], axes=FALSE, col='light yellow', add=T)
+plot(wrld_simpl[grep("Mexico", wrld_simpl@data$NAME),], axes=FALSE, col='light yellow', add=T)
+plot(spatialNeutrals, pch=3, cex=0.75, col="lightgray", add=T)
+
+l <- legend("bottomleft", legend=rep(NA, 16), 
+            ncol=2, pch=c(rep(15, 8), rep(17, 8)), bty="n",
+            col=c(warmPalette[seq(43,1, -6)], coolPalette[seq(43,1, -6)]))
+text(l$text$x+4, l$text$y, c(abs(timeNeg[seq(43,1, -6)]), rep(NA, 8)), pos = 4, cex=0.5)
+
+#plot negatives
+plot(wrld_simpl[grep("United States", wrld_simpl@data$NAME),], xlim=c(-160, -60), ylim=c(15, 80), axes=FALSE, col='light yellow')
+plot(wrld_simpl[grep("Canada", wrld_simpl@data$NAME),], axes=FALSE, col='light yellow', add=T)
+plot(wrld_simpl[grep("Mexico", wrld_simpl@data$NAME),], axes=FALSE, col='light yellow', add=T)
+plot(spatialNegatives, pch=17, col=coolPalette[negCols], add=T)
+
+#plot positives
+plot(wrld_simpl[grep("United States", wrld_simpl@data$NAME),], xlim=c(-160, -60), ylim=c(15, 80), axes=FALSE, col='light yellow')
+plot(wrld_simpl[grep("Canada", wrld_simpl@data$NAME),], axes=FALSE, col='light yellow', add=T)
+plot(wrld_simpl[grep("Mexico", wrld_simpl@data$NAME),], axes=FALSE, col='light yellow', add=T)
+plot(spatialPositives, pch=15, col=warmPalette[posCols], add=T)
+
 dev.off()
 
 
+#### plot spatial patterns of richness change- latitudinal and longitudinal gradients ####
 
-#### plot spatial patterns of richness change ####
+par(mfrow=c(2,4), mar=c(5,4,4,1))
+times<- seq(21000, 0, -3000)
+for (j in 1:length(times)){
+  specificLocs<- siteLocs[match(colnames(richness), sites)]
+  plot(richness[which(rownames(richness)==times[j]),]~specificLocs@coords[,2], 
+       pch=16, xlab="Latitude", ylab="Site richness") #plot richness change as a function of latitude
+  abline(lm(richness[which(rownames(richness)==times[j]),]~specificLocs@coords[,2]))
+  legend("topright", legend=times[j], bty="n")
+  print(times[j])
+  print(summary(lm(richness[which(rownames(richness)==times[j]),]~specificLocs@coords[,2])))  
+}
+
+par(mfrow=c(2,4), mar=c(5,4,4,1))
+times<- seq(21000, 0, -3000)
+for (j in 1:length(times)){
+  specificLocs<- siteLocs[match(colnames(richness), sites)]
+  plot(richness[which(rownames(richness)==times[j]),]~specificLocs@coords[,1], 
+       pch=16, xlab="Longitude", ylab="Site richness") #plot richness change as a function of latitude
+  abline(lm(richness[which(rownames(richness)==times[j]),]~specificLocs@coords[,1]))
+  legend("topright", legend=times[j], bty="n")
+  print(times[j])
+  print(summary(lm(richness[which(rownames(richness)==times[j]),]~specificLocs@coords[,1])))  
+}
+
+
+pdf(file="figures/LatLongGradient.pdf", width=15, height=10)
+par(mfrow=c(2,4), mar=c(5,4,4,1))
+times<- seq(21000, 0, -3000)
+richSeq <- seq(min(richness, na.rm=T), max(richness, na.rm=T), 1)
+cexOverall<- seq(min(richness, na.rm=T), max(richness, na.rm=T), 1)/12
+for (j in 1:length(times)){
+  locs<- latlongs[match(colnames(richness), sites),] 
+  coordinates(locs)<- ~Longitude+Latitude
+  locs<- locs[which(!is.na(richness[which(rownames(richness)==times[j]),])),]
+  tempDat<- richness[which(rownames(richness)==times[j]), which(!is.na(richness[which(rownames(richness)==times[j]),]))]
+  tempDat<- as.data.frame(tempDat)
+  colnames(tempDat)<- "richness"
+  tempDF<- SpatialPointsDataFrame(coords=locs@coords, data=tempDat)
+  cexPts<- cexOverall[tempDF@data$richness]
+  plot(wrld_simpl[grep("United States", wrld_simpl@data$NAME),], 
+       xlim=c(-160, -60), ylim=c(15, 80), axes=FALSE, main=times[j])
+  plot(wrld_simpl[grep("Canada", wrld_simpl@data$NAME),], axes=FALSE, add=T)
+  plot(wrld_simpl[grep("Mexico", wrld_simpl@data$NAME),], axes=FALSE, add=T)
+  plot(locs, col="darkgreen", pch=16, cex=cexPts, add=T)
+}
+temp<- seq(2, 24, 2)
+legend("bottom", pch=16, pt.cex=cexOverall[temp], legend=richSeq[temp], horiz=T)
+dev.off()
+
 
 par(mfrow=c(5,5))
 for (j in 1:nrow(siteRichChanges)){
@@ -177,7 +246,7 @@ for (i in 1:length(biome.list.sites)){
 colnames(biomeMeanRichness) <- biome.list.sites
 rownames(biomeMeanRichness) <- rownames(richness)
 
-pdf(file="figures/RichnessByBiome.pdf", height=4, width=6)
+pdf(file="figures/RichnessByBiome.pdf", height=6, width=10)
   plotCols<- biomeCols[match(biome.list.sites, biome.list.full)]
   biomeSampSize <- vector(length=length(biome.list.sites))
   for (i in 1:length(biome.list.sites)-1){
@@ -189,10 +258,10 @@ pdf(file="figures/RichnessByBiome.pdf", height=4, width=6)
   plot(biomeMeanRichness[,1]~timeNeg, type="n", xlim=c(-21000,0), ylim=c(0, max(biomeMeanRichness, na.rm=T)),
        xlab="Time slice (yr BP)", ylab="Mean Genus Richness")
   for (i in 1:length(biome.list.sites)){
-    lines(biomeMeanRichness[,i]~timeNeg, pch=16, col=plotCols[i])
+    lines(biomeMeanRichness[,i]~timeNeg, pch=16, lwd=2, col=plotCols[i])
   }
-  lines(richnessMeans ~ timeNeg, lwd=1.5, col="black")
-  legend("bottomleft", bty="n", paste("biome=",biome.list.sites, " (", biomeSampSize, " sites)", sep=""), col=plotCols, lwd=1, cex=0.75)
+  lines(richnessMeans ~ timeNeg, lwd=2.5, col="black")
+  legend("bottomleft", bty="n", paste("biome=",biome.list.sites, " (", biomeSampSize, " sites)", sep=""), col=plotCols, lwd=2, cex=0.75)
 dev.off()
 
 
