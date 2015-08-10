@@ -134,6 +134,69 @@ for (i in 1:ncol(siteChangesSeq)){
 lines(seqMeans~timeNeg, col="black", lwd=2)
 dev.off()
 
+
+### OK, back to looking at overall compositional change, with abundance, not just richness ####
+siteChangesPairAbund<- matrix(ncol=ncol(richness), nrow=nrow(richness))
+siteChangesPairAbund<- as.data.frame(siteChangesPairAbund)
+colnames(siteChangesPairAbund)<- colnames(richness)
+rownames(siteChangesPairAbund)<- rownames(richness)
+siteChangesSeqAbund<- siteChangesPairAbund
+
+for (i in 1:ncol(richness)){
+  siteName<- colnames(richness)[i]
+  sitePath<- files[match(siteName, gsub(".gdm.data.csv", "", files))]
+  dat<- read.csv(paste(pollenDir, sitePath, sep="")) #read data
+  dat<- na.omit(dat)
+  
+  ages<- dat[,1] # pull out time periods
+  rownames(dat)<- ages
+  dat<- dat[,-1]
+  
+  d<- vegdist(dat, method="jaccard")
+  d<- as.matrix(d)
+  d2 <- melt(d)[melt(lower.tri(d))$value,]
+  names(d2) <- c("t1", "t2", "jaccard")
+  
+  pairwisematches <- vector(length=length(ages))
+  sequentialmatches <- vector(length=length(ages))
+  for (f in 2:length(ages)){
+    pairwisematches[f-1] <- intersect(which(d2[,1]==ages[f]), which(d2[,2]==ages[f-1]))
+    sequentialmatches[f-1] <- intersect(which(d2[,1]==ages[f]), which(d2[,2]==ages[1]))
+  }
+  
+  pair<- d2[pairwisematches,]
+  seq<- d2[sequentialmatches,]
+  
+  siteChangesPairAbund[match(pair$t1, rownames(siteChangesPairAbund)),i] <- pair$jaccard
+  siteChangesSeqAbund[match(seq$t1, rownames(siteChangesPairAbund)),i] <- seq$jaccard
+  
+}
+
+pairMeansAbund <- apply(siteChangesPairAbund, 1, mean, na.rm=T)
+seqMeansAbund <- apply(siteChangesSeqAbund, 1, mean, na.rm=T)
+
+# Plot the changes ####
+pdf(file="figures/JaccardThruTime-abund-all-withLines.pdf", height=6, width=10)
+par(mfrow=c(1,2))
+plot(pairMeansAbund ~ timeNeg, 
+     xlim=c(-21000,0), ylim=c(0, max(siteChangesPairAbund, na.rm=T)), 
+     type="n", 
+     xlab="Time slice (yr BP)", ylab="Jaccard Distance - pairwise")
+for (i in 1:ncol(siteChangesPairAbund)){
+  lines(siteChangesPairAbund[,i]~timeNeg, col="gray") 
+}
+lines(pairMeansAbund~timeNeg, col="black", lwd=2)
+
+plot(seqMeansAbund ~ timeNeg, 
+     xlim=c(-21000,0), ylim=c(0, max(siteChangesSeqAbund, na.rm=T)), 
+     type="n", 
+     xlab="Time slice (yr BP)", ylab="Jaccard Distance - from youngest")
+for (i in 1:ncol(siteChangesSeqAbund)){
+  lines(siteChangesSeqAbund[,i]~timeNeg, col="gray") 
+}
+lines(seqMeansAbund~timeNeg, col="black", lwd=2)
+dev.off()
+
 # Does compositional change correlate to climate change? either rates or magnitudes? ####
 # load and process climate data ####
 library(raster)
@@ -168,44 +231,30 @@ siteP <- t(siteP)
 ## match climate velocity to site changes ####
 # siteChangesPair, siteChangesSeq...21000 = change between 21000 and 20500, 500 = change between 500 and 0
 
-# temperature
-varT<- "tmax_year_ave"
-varP<- "prcp_year_ave"
-
 siteTempChangesPair<- siteTempVelocPair<- matrix(nrow=nrow(siteChangesPair), ncol=ncol(siteChangesPair))
 sitePrecipChangesPair<- sitePrecipVelocPair<- matrix(nrow=nrow(siteChangesPair), ncol=ncol(siteChangesPair))
 
 rownames(siteTempChangesPair) <- rownames(siteTempVelocPair) <- rownames(sitePrecipChangesPair) <- rownames(sitePrecipVelocPair) <- rownames(siteChangesPair)
 colnames(siteTempChangesPair) <- colnames(siteTempVelocPair) <- colnames(sitePrecipChangesPair) <- colnames(sitePrecipVelocPair) <- colnames(siteChangesPair)
 
+# total climate change
+siteTempChangesPair[2:43,]<- siteT[1:42,] - siteT[2:43,]
+sitePrecipChangesPair[2:43,]<- siteP[1:42,] - siteP[2:43,]
+
 for (k in 2:nrow(siteChangesPair)){
   t2<- as.numeric(rownames(siteChangesPair)[k])
   t1<- t2-500
   
-  #read in climate data and extract values from shared sites
-  tempVeloc<- stack(paste(climateDir, "Climate Velocity/", varT, "-", t2, "-", t1, ".tif", sep=""))
+  #read in climate data and extract velocity values from shared sites
+  tempVeloc<- stack(paste(climateDir, "Climate Velocity/", tVar, "-", t2, "-", t1, ".tif", sep=""))
   names(tempVeloc)<- c("temporalGrad", "spatialGrad", "Velocity", "BRNG")
   
-  precipVeloc<- stack(paste(climateDir, "Climate Velocity prcp/", varP, "-", t2, "-", t1, ".tif", sep=""))
+  precipVeloc<- stack(paste(climateDir, "Climate Velocity prcp/", pVar, "-", t2, "-", t1, ".tif", sep=""))
   names(precipVeloc)<- c("temporalGrad", "spatialGrad", "Velocity", "BRNG")
-  
-  siteTempChangesPair[k,]<- extract(tempVeloc$temporalGrad, siteLocs[match(colnames(siteChangesPair), sites)])*(t2-t1)
-  sitePrecipChangesPair[k,]<- extract(precipVeloc$temporalGrad, siteLocs[match(colnames(siteChangesPair), sites)])*(t2-t1)
-  
-  #siteTempVelocPair[k,]<- extract(tempVeloc$Velocity, siteLocs[match(colnames(siteChangesPair), sites)])
-  #sitePrecipVelocPair[k,]<- extract(precipVeloc$Velocity, siteLocs[match(colnames(siteChangesPair), sites)])
 
-  # raw temp values, not velocity
-  ### JESSICA START HERE!!! ####
-  temp1<- raster(paste("/Volumes/bloisgroup/bloislab/Data/Climate/Paleo/CCSM3_500/With_PaleoShorelines/", t2, "BP/", varT, ".tiff", sep=""))
-  temp2<- 
-  precip1<- 
-  precip2<- 
-   
-  siteTempChangesPair[k,]<- extract(temp1$temporalGrad, siteLocs[match(colnames(siteChangesPair), sites)]) - extract(temp2$temporalGrad, siteLocs[match(colnames(siteChangesPair), sites)])
-  sitePrecipChangesPair[k,]<- extract(precip1$temporalGrad, siteLocs[match(colnames(siteChangesPair), sites)]) - extract(precip2$temporalGrad, siteLocs[match(colnames(siteChangesPair), sites)])
-  
-    
+  siteTempVelocPair[k,]<- extract(tempVeloc$Velocity, siteLocs[match(colnames(siteChangesPair), sites)])
+  sitePrecipVelocPair[k,]<- extract(precipVeloc$Velocity, siteLocs[match(colnames(siteChangesPair), sites)])
+
 }
 
 
@@ -235,26 +284,35 @@ par(mfrow=c(2,2))
 #   
 
 ## Plot mean compositional change against climate change
+pdf(file="figures/Jaccard-climatechange.pdf", width=10, height=6)
   par(mfrow=c(2,2))
+  plot(rowMeans(siteChangesPair, na.rm=T) ~ rowMeans(siteTempChangesPair, na.rm=T),
+       pch=16, ylab="Mean Compositional Change - PA", xlab="Mean Max Temperature Change")
+  abline(lm(rowMeans(siteChangesPair, na.rm=T) ~ rowMeans(siteTempChangesPair, na.rm=T)))
+  summary(lm(rowMeans(siteChangesPair, na.rm=T) ~ rowMeans(siteTempChangesPair, na.rm=T)))
+  legend("bottomright", legend="NS", bty="n")
+  
+  plot(rowMeans(siteChangesPair, na.rm=T) ~ rowMeans(sitePrecipChangesPair, na.rm=T),
+       pch=16, ylab="Mean Compositional Change - PA", xlab="Mean Precipitation Change")
+  abline(lm(rowMeans(siteChangesPair, na.rm=T) ~ rowMeans(sitePrecipChangesPair, na.rm=T)))
+  summary(lm(rowMeans(siteChangesPair, na.rm=T) ~ rowMeans(sitePrecipChangesPair, na.rm=T)))
+  legend("bottomright", legend="NS", bty="n")
+  
   plot(rowMeans(siteChangesPairAbund, na.rm=T) ~ rowMeans(siteTempChangesPair, na.rm=T),
-       pch=16, ylab="Mean Compositional Change", xlab="Mean Max Temperature Change")
+       pch=16, ylab="Mean Compositional Change - Abund", xlab="Mean Max Temperature Change")
   abline(lm(rowMeans(siteChangesPairAbund, na.rm=T) ~ rowMeans(siteTempChangesPair, na.rm=T)))
   summary(lm(rowMeans(siteChangesPairAbund, na.rm=T) ~ rowMeans(siteTempChangesPair, na.rm=T)))
+  legend("bottomright", legend="R2adj= 0.14, p=.009", bty="n")
+  
   
   plot(rowMeans(siteChangesPairAbund, na.rm=T) ~ rowMeans(sitePrecipChangesPair, na.rm=T),
-       pch=16, ylab="Mean Compositional Change", xlab="Mean Precipitation Change")
+       pch=16, ylab="Mean Compositional Change - Jaccard", xlab="Mean Precipitation Change")
   abline(lm(rowMeans(siteChangesPairAbund, na.rm=T) ~ rowMeans(sitePrecipChangesPair, na.rm=T)))
   summary(lm(rowMeans(siteChangesPairAbund, na.rm=T) ~ rowMeans(sitePrecipChangesPair, na.rm=T)))
+  legend("bottomright", legend="NS", bty="n")
   
-  plot(rowMeans(siteChangesPairAbund, na.rm=T) ~ rowMeans(siteTempVelocPair, na.rm=T),
-       pch=16, ylab="Mean Compositional Change", xlab="Mean Max Temperature Velocity")
-  abline(lm(rowMeans(siteChangesPairAbund, na.rm=T) ~ rowMeans(siteTempVelocPair, na.rm=T)))
-  summary(lm(rowMeans(siteChangesPairAbund, na.rm=T) ~ rowMeans(siteTempVelocPair, na.rm=T)))
+dev.off()  
   
-  plot(rowMeans(siteChangesPairAbund, na.rm=T) ~ rowMeans(sitePrecipVelocPair, na.rm=T),
-       pch=16, ylab="Mean Compositional Change", xlab="Mean Precipitation Velocity")
-  abline(lm(rowMeans(siteChangesPairAbund, na.rm=T) ~ rowMeans(sitePrecipVelocPair, na.rm=T)))
-  summary(lm(rowMeans(siteChangesPairAbund, na.rm=T) ~ rowMeans(sitePrecipVelocPair, na.rm=T)))
   # No significant associations with richness (siteChangesPair) ###
   # Sig associations with temperature with abundance (siteChangesPairAbund) ###
   
@@ -368,46 +426,7 @@ par(mfrow=c(2,2))
   
   
   
-  ### OK, back to looking at overall compositional change, with abundance, not just richness ####
-  siteChangesPairAbund<- matrix(ncol=ncol(richness), nrow=nrow(richness))
-  siteChangesPairAbund<- as.data.frame(siteChangesPairAbund)
-  colnames(siteChangesPairAbund)<- colnames(richness)
-  rownames(siteChangesPairAbund)<- rownames(richness)
-  siteChangesSeqAbund<- siteChangesPairAbund
-  
-  for (i in 1:ncol(richness)){
-    siteName<- colnames(richness)[i]
-    sitePath<- files[match(siteName, gsub(".gdm.data.csv", "", files))]
-    dat<- read.csv(paste(pollenDir, sitePath, sep="")) #read data
-    dat<- na.omit(dat)
-    
-    ages<- dat[,1] # pull out time periods
-    rownames(dat)<- ages
-    dat<- dat[,-1]
-    
-    d<- vegdist(dat, method="jaccard")
-    d<- as.matrix(d)
-    d2 <- melt(d)[melt(lower.tri(d))$value,]
-    names(d2) <- c("t1", "t2", "jaccard")
-    
-    pairwisematches <- vector(length=length(ages))
-    sequentialmatches <- vector(length=length(ages))
-    for (f in 2:length(ages)){
-      pairwisematches[f-1] <- intersect(which(d2[,1]==ages[f]), which(d2[,2]==ages[f-1]))
-      sequentialmatches[f-1] <- intersect(which(d2[,1]==ages[f]), which(d2[,2]==ages[1]))
-    }
-    
-    pair<- d2[pairwisematches,]
-    seq<- d2[sequentialmatches,]
-    
-    siteChangesPairAbund[match(pair$t1, rownames(siteChangesPairAbund)),i] <- pair$jaccard
-    siteChangesSeqAbund[match(seq$t1, rownames(siteChangesPairAbund)),i] <- seq$jaccard
-    
-  }
-  
-  pairMeansAbund <- apply(siteChangesPairAbund, 1, mean, na.rm=T)
-  seqMeansAbund <- apply(siteChangesSeqAbund, 1, mean, na.rm=T)
-  
+ 
 ### Plot richness and abundance dissim, pairwise and sequential, with lines ####
   # Plot the changes ####
   pdf(file="figures/JaccardThruTime-RichAndAbund-withLines.pdf", height=8, width=10)
