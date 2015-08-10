@@ -183,18 +183,31 @@ for (k in 2:nrow(siteChangesPair)){
   t1<- t2-500
   
   #read in climate data and extract values from shared sites
-  #tempVeloc<- stack(paste(climateDir, "Climate Velocity/", varT, "-", t2, "-", t1, ".tif", sep=""))
-  #names(tempVeloc)<- c("temporalGrad", "spatialGrad", "Velocity", "BRNG")
+  tempVeloc<- stack(paste(climateDir, "Climate Velocity/", varT, "-", t2, "-", t1, ".tif", sep=""))
+  names(tempVeloc)<- c("temporalGrad", "spatialGrad", "Velocity", "BRNG")
   
-  #precipVeloc<- stack(paste(climateDir, "Climate Velocity prcp/", varP, "-", t2, "-", t1, ".tif", sep=""))
-  #names(precipVeloc)<- c("temporalGrad", "spatialGrad", "Velocity", "BRNG")
+  precipVeloc<- stack(paste(climateDir, "Climate Velocity prcp/", varP, "-", t2, "-", t1, ".tif", sep=""))
+  names(precipVeloc)<- c("temporalGrad", "spatialGrad", "Velocity", "BRNG")
   
   siteTempChangesPair[k,]<- extract(tempVeloc$temporalGrad, siteLocs[match(colnames(siteChangesPair), sites)])*(t2-t1)
   sitePrecipChangesPair[k,]<- extract(precipVeloc$temporalGrad, siteLocs[match(colnames(siteChangesPair), sites)])*(t2-t1)
   
-  siteTempVelocPair[k,]<- extract(tempVeloc$Velocity, siteLocs[match(colnames(siteChangesPair), sites)])
-  sitePrecipVelocPair[k,]<- extract(precipVeloc$Velocity, siteLocs[match(colnames(siteChangesPair), sites)])
+  #siteTempVelocPair[k,]<- extract(tempVeloc$Velocity, siteLocs[match(colnames(siteChangesPair), sites)])
+  #sitePrecipVelocPair[k,]<- extract(precipVeloc$Velocity, siteLocs[match(colnames(siteChangesPair), sites)])
+
+  # raw temp values, not velocity
+  ### JESSICA START HERE!!! ####
+  temp1<- raster(paste("/Volumes/bloisgroup/bloislab/Data/Climate/Paleo/CCSM3_500/With_PaleoShorelines/", t2, "BP/", varT, ".tiff", sep=""))
+  temp2<- 
+  precip1<- 
+  precip2<- 
+   
+  siteTempChangesPair[k,]<- extract(temp1$temporalGrad, siteLocs[match(colnames(siteChangesPair), sites)]) - extract(temp2$temporalGrad, siteLocs[match(colnames(siteChangesPair), sites)])
+  sitePrecipChangesPair[k,]<- extract(precip1$temporalGrad, siteLocs[match(colnames(siteChangesPair), sites)]) - extract(precip2$temporalGrad, siteLocs[match(colnames(siteChangesPair), sites)])
+  
+    
 }
+
 
 # Plot:
 # Amount of temperature change, amount of precipitation change, on average
