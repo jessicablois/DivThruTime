@@ -504,7 +504,7 @@ dev.off()
   dev.off()
   
   #targeted periods: end of bolling allerod, end of younger dryas ####
-  # warm: 15 - 14.5 , 12 - 11.5
+  # warm: 15 - 14 , 12 - 11
   # cold: 14.5 - 14, 13-12.5
   
   siteChangesPairTarget <- siteChangesPair[c(which(rownames(siteChangesPair)=="12000"), which(rownames(siteChangesPair)=="15000")), ]
@@ -512,11 +512,15 @@ dev.off()
   sitePrecipChangesPairTarget <- sitePrecipChangesPair[c(which(rownames(sitePrecipChangesPair)=="12000"), which(rownames(sitePrecipChangesPair)=="15000")), ]
   
   par(mfrow=c(1,2))
-  plot(convertDataFrame(siteChangesPairTarget) ~ convertDataFrame(siteTempChangesPairTarget), pch=16, cex=0.5)
+  plot(convertDataFrame(siteChangesPairTarget) ~ convertDataFrame(siteTempChangesPairTarget), 
+       pch=16, cex=0.5,
+       xlab="Site max temperature changes", ylab="Site compositional changes")
   abline(lm(convertDataFrame(siteChangesPairTarget) ~ convertDataFrame(siteTempChangesPairTarget)))
   summary(lm(convertDataFrame(siteChangesPairTarget) ~ convertDataFrame(siteTempChangesPairTarget)))
   
-  plot(convertDataFrame(siteChangesPairTarget) ~ convertDataFrame(sitePrecipChangesPairTarget), pch=16, cex=0.5)
+  plot(convertDataFrame(siteChangesPairTarget) ~ convertDataFrame(sitePrecipChangesPairTarget), 
+       pch=16, cex=0.5,
+       xlab="Site precipitation changes", ylab="Site compositional changes")
   abline(lm(convertDataFrame(siteChangesPairTarget) ~ convertDataFrame(sitePrecipChangesPairTarget)))
   summary(lm(convertDataFrame(siteChangesPairTarget) ~ convertDataFrame(sitePrecipChangesPairTarget)))
   
