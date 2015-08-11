@@ -6,7 +6,7 @@ pollenMax<- apply(dat0, 2, max)
 pollenThreshold<- pollenMax*0.05
 
 #### set times ####
-interval<- 500
+interval<- 1000
 allTimes<- seq(0, 21000, by=interval)
 
 #### set sites list ####

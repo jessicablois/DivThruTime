@@ -44,8 +44,8 @@ for (i in 1:ncol(richness)){
   siteChangesSeqRaw[match(seq$t1, rownames(siteChangesPairRaw)),i] <- seq$distance
 }
 
-pairMeansRaw <- apply(siteChangesPair, 1, mean, na.rm=T)
-seqMeansRaw <- apply(siteChangesSeq, 1, mean, na.rm=T)
+pairMeansRaw <- apply(siteChangesPairRaw, 1, mean, na.rm=T)
+seqMeansRaw <- apply(siteChangesSeqRaw, 1, mean, na.rm=T)
 
 # Plot the changes ####
 pdf(file="figures/RichnessChangeThruTime-all-withLines.pdf", height=6, width=10)
@@ -82,7 +82,7 @@ for (i in 1:ncol(richness)){
   sitePath<- files[match(siteName, gsub(".gdm.data.csv", "", files))]
   dat<- read.csv(paste(pollenDir, sitePath, sep="")) #read data
   dat<- na.omit(dat)
-  
+  dat<- dat[which(!is.na(match(dat$sample.ages, allTimes))),]
   y<- calcSiteRichness(dat, minTime, maxTime, pollenThreshold, interval) 
 
   ages<- dat[,1] # pull out time periods
@@ -112,7 +112,7 @@ pairMeans <- apply(siteChangesPair, 1, mean, na.rm=T)
 seqMeans <- apply(siteChangesSeq, 1, mean, na.rm=T)
 
 # Plot the changes ####
-pdf(file="figures/JaccardThruTime-all-withLines.pdf", height=6, width=10)
+pdf(file="figures/JaccardThruTime-all-withLines.pdf", height=5, width=10)
 par(mfrow=c(1,2))
 plot(pairMeans ~ timeNeg, 
      xlim=c(-21000,0), ylim=c(0, max(siteChangesPair, na.rm=T)), 
@@ -146,6 +146,7 @@ for (i in 1:ncol(richness)){
   sitePath<- files[match(siteName, gsub(".gdm.data.csv", "", files))]
   dat<- read.csv(paste(pollenDir, sitePath, sep="")) #read data
   dat<- na.omit(dat)
+  dat<- dat[which(!is.na(match(dat$sample.ages, allTimes))),]
   
   ages<- dat[,1] # pull out time periods
   rownames(dat)<- ages
@@ -175,7 +176,7 @@ pairMeansAbund <- apply(siteChangesPairAbund, 1, mean, na.rm=T)
 seqMeansAbund <- apply(siteChangesSeqAbund, 1, mean, na.rm=T)
 
 # Plot the changes ####
-pdf(file="figures/JaccardThruTime-abund-all-withLines.pdf", height=6, width=10)
+pdf(file="figures/JaccardThruTime-abund-all-withLines.pdf", height=5, width=10)
 par(mfrow=c(1,2))
 plot(pairMeansAbund ~ timeNeg, 
      xlim=c(-21000,0), ylim=c(0, max(siteChangesPairAbund, na.rm=T)), 
@@ -237,12 +238,12 @@ rownames(siteTempChangesPair) <- rownames(siteTempVelocPair) <- rownames(sitePre
 colnames(siteTempChangesPair) <- colnames(siteTempVelocPair) <- colnames(sitePrecipChangesPair) <- colnames(sitePrecipVelocPair) <- colnames(siteChangesPair)
 
 # total climate change
-siteTempChangesPair[2:43,]<- siteT[1:42,] - siteT[2:43,]
-sitePrecipChangesPair[2:43,]<- siteP[1:42,] - siteP[2:43,]
+siteTempChangesPair[2:nrow(siteT),]<- siteT[1:nrow(siteT)-1,] - siteT[2:nrow(siteT),]
+sitePrecipChangesPair[2:nrow(siteT),]<- siteP[1:nrow(siteT)-1,] - siteP[2:nrow(siteT),]
 
 for (k in 2:nrow(siteChangesPair)){
   t2<- as.numeric(rownames(siteChangesPair)[k])
-  t1<- t2-500
+  t1<- t2-1000
   
   #read in climate data and extract velocity values from shared sites
   tempVeloc<- stack(paste(climateDir, "Climate Velocity/", tVar, "-", t2, "-", t1, ".tif", sep=""))
@@ -323,7 +324,7 @@ pdf(file="figures/Jaccard-climatechange.pdf", width=10, height=6)
        pch=16, ylab="Mean Compositional Change - PA", xlab="Mean Max Temperature Change")
   abline(lm(rowMeans(siteChangesPair, na.rm=T) ~ rowMeans(siteTempChangesPair, na.rm=T)))
   summary(lm(rowMeans(siteChangesPair, na.rm=T) ~ rowMeans(siteTempChangesPair, na.rm=T)))
-  legend("bottomright", legend="NS", bty="n")
+  legend("bottomright", legend="R2adj= 0.19, p=.03", bty="n")
   
   plot(rowMeans(siteChangesPair, na.rm=T) ~ rowMeans(sitePrecipChangesPair, na.rm=T),
        pch=16, ylab="Mean Compositional Change - PA", xlab="Mean Precipitation Change")
@@ -335,7 +336,7 @@ pdf(file="figures/Jaccard-climatechange.pdf", width=10, height=6)
        pch=16, ylab="Mean Compositional Change - Abund", xlab="Mean Max Temperature Change")
   abline(lm(rowMeans(siteChangesPairAbund, na.rm=T) ~ rowMeans(siteTempChangesPair, na.rm=T)))
   summary(lm(rowMeans(siteChangesPairAbund, na.rm=T) ~ rowMeans(siteTempChangesPair, na.rm=T)))
-  legend("bottomright", legend="R2adj= 0.14, p=.009", bty="n")
+  legend("bottomright", legend="R2adj= 0.27, p=.01", bty="n")
   
   
   plot(rowMeans(siteChangesPairAbund, na.rm=T) ~ rowMeans(sitePrecipChangesPair, na.rm=T),

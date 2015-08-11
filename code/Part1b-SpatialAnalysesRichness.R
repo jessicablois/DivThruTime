@@ -250,9 +250,12 @@ pdf(file="figures/RichnessByBiome.pdf", height=6, width=10)
   plotCols<- biomeCols[match(biome.list.sites, biome.list.full)]
   biomeSampSize <- vector(length=length(biome.list.sites))
   for (i in 1:length(biome.list.sites)-1){
+    if(i==5){biomeSampSize[i]<- 1}else{
     biomeSampSize[i] <- ncol(richness[,which(biomesinSamp==biome.list.sites[i])])
+    }
   }
-  biomeSampSize[7]<- 1
+  
+  #biomeSampSize[7]<- 1
   
   par(mar=c(4,4,4,4)+0.1)
   plot(biomeMeanRichness[,1]~timeNeg, type="n", xlim=c(-21000,0), ylim=c(0, max(biomeMeanRichness, na.rm=T)),

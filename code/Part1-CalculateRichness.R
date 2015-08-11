@@ -26,7 +26,8 @@ for (i in 1:length(sites)){
     minTime<- min(matchedTimes, na.rm=T)
     maxTime<- max(matchedTimes, na.rm=T)
     
-    richness[i,]<- calcSiteRichness(dat, minTime, maxTime, pollenThreshold, interval) 
+    m <- calcSiteRichness(dat, minTime, maxTime, pollenThreshold, interval)
+    richness[i,]<- m$fullRich
   }
 }
 
